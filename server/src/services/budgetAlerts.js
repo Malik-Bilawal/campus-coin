@@ -1,7 +1,7 @@
 import { Budget } from "../models/Budget.js";
 import { Transaction } from "../models/Transaction.js";
 import { Notification } from "../models/Notification.js";
-import { Category } from "../models/Category.js";
+import { emitNotification, emitBudgetUpdate } from "../config/socket.js";
 
 function monthKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -34,18 +34,46 @@ export async function checkBudgetAlerts(userId, categoryId, date) {
     ]);
 
     const spent = agg[0]?.spent || 0;
-    const pct = (spent / budget.limit) * 100;
+    const pct = budget.limit > 0 ? Math.round((spent / budget.limit) * 100) : 0;
     const catName = budget.categoryId?.name || "Category";
 
     const alerts = [];
+
+    emitBudgetUpdate(userId, {
+      categoryId: String(categoryId),
+      month,
+      spent,
+      limit: budget.limit,
+      percentage: pct,
+    });
+
+    // Only notify once per level per month per category via latest unread check
     if (pct >= 100) {
       const msg = `🚨 ${catName} budget exceeded! Spent ${spent.toFixed(0)} / ${budget.limit.toFixed(0)}`;
+      const existing = await Notification.findOne({
+        userId,
+        type: "budget_alert",
+        message: msg,
+        read: false,
+      });
+      if (!existing) {
+        const n = await Notification.create({ userId, type: "budget_alert", message: msg });
+        emitNotification(userId, n.toObject());
+      }
       alerts.push({ level: "exceeded", message: msg, percentage: 100 });
-      await Notification.create({ userId, type: "budget_alert", message: msg });
     } else if (pct >= 80) {
-      const msg = `⚠️ ${catName} budget at ${Math.round(pct)}% (${spent.toFixed(0)} / ${budget.limit.toFixed(0)})`;
-      alerts.push({ level: "warning", message: msg, percentage: Math.round(pct) });
-      await Notification.create({ userId, type: "budget_alert", message: msg });
+      const msg = `⚠️ ${catName} budget at ${pct}% (${spent.toFixed(0)} / ${budget.limit.toFixed(0)})`;
+      const existing = await Notification.findOne({
+        userId,
+        type: "budget_alert",
+        message: { $regex: `${catName} budget at` },
+        read: false,
+      });
+      if (!existing) {
+        const n = await Notification.create({ userId, type: "budget_alert", message: msg });
+        emitNotification(userId, n.toObject());
+      }
+      alerts.push({ level: "warning", message: msg, percentage: pct });
     }
 
     return alerts;

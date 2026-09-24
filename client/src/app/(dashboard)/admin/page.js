@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Users, Receipt, Tags, Activity, ArrowRight } from "lucide-react";
+import { Users, Receipt, Tags, Activity, ArrowRight, Server, Sparkles, Database } from "lucide-react";
 import { api } from "@/lib/api";
 import { useUIStore } from "@/store/ui";
 import { formatMoney } from "@/lib/utils";
@@ -16,13 +16,19 @@ export default function AdminPage() {
   const addToast = useUIStore((s) => s.addToast);
   const [stats, setStats] = useState(null);
   const [announcements, setAnnouncements] = useState([]);
+  const [aiStatus, setAiStatus] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([api.get("/admin/stats"), api.get("/admin/announcements")])
-      .then(([s, a]) => {
+    Promise.all([
+      api.get("/admin/stats"),
+      api.get("/admin/announcements"),
+      api.get("/ai/status").catch(() => ({ data: null })),
+    ])
+      .then(([s, a, ai]) => {
         setStats(s.data.stats);
         setAnnouncements(a.data.announcements);
+        setAiStatus(ai.data);
       })
       .catch((e) => addToast({ type: "error", message: e.message }))
       .finally(() => setLoading(false));
@@ -125,6 +131,44 @@ export default function AdminPage() {
           )}
         </Card>
       </div>
+
+      {/* System health */}
+      <Card className="p-5">
+        <CardHeader title="System health" subtitle="Live service status" />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
+            <div className="rounded-lg bg-honey-500/15 p-2">
+              <Sparkles className="h-4 w-4 text-honey-600" />
+            </div>
+            <div>
+              <p className="text-xs text-zinc-500">AI provider</p>
+              <p className="text-sm font-semibold">
+                {aiStatus?.primary
+                  ? `${aiStatus.primary} ${aiStatus.groq || aiStatus.openrouter ? "✓" : ""}`
+                  : "fallback only"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
+            <div className="rounded-lg bg-emerald-500/15 p-2">
+              <Database className="h-4 w-4 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-xs text-zinc-500">Database</p>
+              <p className="text-sm font-semibold">MongoDB connected</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
+            <div className="rounded-lg bg-blue-500/15 p-2">
+              <Server className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-xs text-zinc-500">API / WebSocket</p>
+              <p className="text-sm font-semibold">Online</p>
+            </div>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }

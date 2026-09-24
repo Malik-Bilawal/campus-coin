@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal, ConfirmDialog } from "@/components/ui/Modal";
 import { Input, Select } from "@/components/ui/Input";
 import { EmptyState, SkeletonList } from "@/components/ui/EmptyState";
+import { celebrate } from "@/lib/confetti";
 
 export default function BudgetsPage() {
   const user = useAuthStore((s) => s.user);
@@ -39,7 +40,16 @@ export default function BudgetsPage() {
     setLoading(true);
     try {
       const res = await api.get(`/budgets?month=${month}`);
-      setBudgets(res.data.budgets);
+      const list = res.data.budgets || [];
+      setBudgets(list);
+      const allSafe = list.length > 0 && list.every((b) => (b.percentage || 0) < 80);
+      if (allSafe) {
+        const key = `cc-confetti-budgets-${month}`;
+        if (!sessionStorage.getItem(key)) {
+          sessionStorage.setItem(key, "1");
+          celebrate();
+        }
+      }
     } catch (e) {
       addToast({ type: "error", message: e.message });
     } finally {

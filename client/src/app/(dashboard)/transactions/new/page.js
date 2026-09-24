@@ -28,6 +28,8 @@ export default function NewTransactionPage() {
     recurringDay: "",
   });
   const [loading, setLoading] = useState(false);
+  const [aiSuggest, setAiSuggest] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     api
@@ -39,6 +41,35 @@ export default function NewTransactionPage() {
       })
       .catch(() => {});
   }, []);
+
+  // Live AI category suggest while typing note
+  useEffect(() => {
+    if (!form.note || form.note.length < 4) {
+      setAiSuggest(null);
+      return;
+    }
+    const t = setTimeout(async () => {
+      setAiLoading(true);
+      try {
+        const res = await api.post("/ai/categorize", {
+          note: form.note,
+          type: form.type,
+        });
+        setAiSuggest(res.data.suggestion);
+        const match = categories.find(
+          (c) => c.name.toLowerCase() === String(res.data.suggestion?.name).toLowerCase()
+        );
+        if (match && res.data.suggestion?.confidence >= 0.5) {
+          setForm((f) => ({ ...f, categoryId: match._id }));
+        }
+      } catch {
+        setAiSuggest(null);
+      } finally {
+        setAiLoading(false);
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [form.note, form.type, categories]);
 
   const filtered = categories.filter((c) => c.type === form.type);
 
@@ -72,6 +103,7 @@ export default function NewTransactionPage() {
         date: new Date(form.date).toISOString(),
         isRecurring: form.isRecurring,
         recurringDay: form.isRecurring && form.recurringDay ? Number(form.recurringDay) : undefined,
+        aiSuggested: !!aiSuggest?.aiSuggested,
       });
 
       const alerts = res.data?.alerts || [];
@@ -188,6 +220,30 @@ export default function NewTransactionPage() {
             value={form.note}
             onChange={(e) => setForm({ ...form, note: e.target.value })}
           />
+
+          {(aiLoading || aiSuggest) && form.note.length >= 4 && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-xs ${
+                aiSuggest?.aiSuggested
+                  ? "border-honey-500/40 bg-honey-500/10 text-honey-800 dark:text-honey-200"
+                  : "border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900"
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <Sparkles className={`h-3.5 w-3.5 ${aiLoading ? "animate-pulse" : ""}`} />
+                {aiLoading
+                  ? "AI thinking..."
+                  : aiSuggest?.aiSuggested
+                    ? `AI suggests: ${aiSuggest.name} (${Math.round((aiSuggest.confidence || 0) * 100)}%)`
+                    : `Rules suggest: ${aiSuggest?.name}`}
+              </span>
+              {aiSuggest && !aiSuggest.aiSuggested && (
+                <span className="text-[10px] uppercase opacity-60">fallback</span>
+              )}
+            </motion.div>
+          )}
 
           <div className="flex items-start gap-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
             <input

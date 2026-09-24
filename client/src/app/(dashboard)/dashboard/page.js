@@ -20,6 +20,7 @@ import { Card, StatCard, CardHeader } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SkeletonList } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
+import { celebrate } from "@/lib/confetti";
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -35,6 +36,12 @@ export default function DashboardPage() {
     try {
       const res = await api.get("/dashboard");
       setData(res.data);
+      const saved = (res.data.income || 0) - (res.data.expense || 0);
+      const goal = Number(user?.savingsGoal) || 0;
+      if (goal > 0 && saved >= goal && !sessionStorage.getItem("cc-confetti-goal")) {
+        sessionStorage.setItem("cc-confetti-goal", "1");
+        celebrate();
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -65,12 +72,30 @@ export default function DashboardPage() {
   const currency = user?.currency || "BDT";
   const balance = data?.balance ?? 0;
   const topCat = data?.topCategory;
+  const streak = user?.loginStreak || 0;
+  const savedThisMonth = (data?.income || 0) - (data?.expense || 0);
+  const goalHit =
+    user?.savingsGoal > 0 && savedThisMonth >= Number(user.savingsGoal);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={`${data?.greeting || "Hi"}, ${user?.name?.split(" ")[0] || "there"} 👋`}
-        subtitle="Here's your money snapshot for this month"
+        subtitle={
+          <>
+            Here&apos;s your money snapshot for this month
+            {streak > 0 && (
+              <span className="ml-2 inline-flex items-center rounded-full bg-honey-500/15 px-2 py-0.5 text-[11px] font-semibold text-honey-700 dark:text-honey-300">
+                {streak} day streak 🔥
+              </span>
+            )}
+            {goalHit && (
+              <span className="ml-2 inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                Goal hit 🎯
+              </span>
+            )}
+          </>
+        }
         actions={
           <>
             <Link href="/transactions/new">

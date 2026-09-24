@@ -10,6 +10,7 @@ import tipRoutes from "./tip.routes.js";
 import bookmarkRoutes from "./bookmark.routes.js";
 import notificationRoutes from "./notification.routes.js";
 import adminRoutes from "./admin.routes.js";
+import aiRoutes from "./ai.routes.js";
 import { sendSuccess } from "../utils/response.js";
 
 const router = Router();
@@ -27,5 +28,6 @@ router.use("/tips", tipRoutes);
 router.use("/bookmarks", bookmarkRoutes);
 router.use("/notifications", notificationRoutes);
 router.use("/admin", adminRoutes);
+router.use("/ai", aiRoutes);
 
 export default router;

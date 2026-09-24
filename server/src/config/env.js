@@ -1,7 +1,7 @@
-import dotenv from "dotenv";
+import "dotenv/config";
+import "dotenv/config";
+import "dotenv/config";
 import { z } from "zod";
-
-dotenv.config();
 
 const envSchema = z.object({
   PORT: z.string().default("5000"),
@@ -16,6 +16,10 @@ const envSchema = z.object({
   MONGODB_LOCAL_URI: z.string().optional(),
   FORCE_ATLAS: z.string().optional(),
   TRY_ATLAS_FIRST: z.string().optional(),
+  GROQ_API_KEY: z.string().optional(),
+  GROQ_MODEL: z.string().optional(),
+  OPENROUTER_API_KEY: z.string().optional(),
+  OPENROUTER_MODEL: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

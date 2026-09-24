@@ -10,16 +10,19 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
+    "canvas-confetti": "^1.9.4",
     "date-fns": "^4.4.0",
     "framer-motion": "^13.4.2",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.48.0",
     "next": "14.2.35",
+    "papaparse": "^5.7.0",
     "react": "^18",
     "react-dom": "^18",
     "react-hook-form": "^7.88.0",
     "recharts": "^3.10.1",
+    "socket.io-client": "^4.8.3",
     "zustand": "^5.0.15"
   },
   "devDependencies": {

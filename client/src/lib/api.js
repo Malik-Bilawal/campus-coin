@@ -51,7 +51,17 @@ class ApiClient {
         method: "POST",
         credentials: "include",
       });
-      return res.ok;
+      if (!res.ok) return false;
+      try {
+        const data = await res.json();
+        const tok = data?.data?.accessToken;
+        if (tok && typeof window !== "undefined") {
+          sessionStorage.setItem("accessToken", tok);
+        }
+      } catch {
+        /* ignore body parse */
+      }
+      return true;
     } catch {
       return false;
     }

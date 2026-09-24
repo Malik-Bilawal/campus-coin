@@ -6,6 +6,8 @@ import { ApiError } from "../utils/apiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { sendSuccess } from "../utils/response.js";
 import { checkBudgetAlerts } from "../services/budgetAlerts.js";
+import { aiCategorize } from "../services/ai/categorize.js";
+import { emitToUser } from "../config/socket.js";
 
 export const listTransactions = asyncHandler(async (req, res) => {
   const { type, categoryId, from, to, q, page = 1, limit = 20 } = req.query;
@@ -43,7 +45,29 @@ export const listTransactions = asyncHandler(async (req, res) => {
 });
 
 export const createTransaction = asyncHandler(async (req, res) => {
-  const { type, amount, categoryId, note, date, isRecurring, recurringDay } = req.body;
+  let { type, amount, categoryId, note, date, isRecurring, recurringDay, aiSuggested } = req.body;
+
+  let usedAi = !!aiSuggested;
+
+  // If no category provided, auto-suggest via AI
+  if (!categoryId && note) {
+    const cats = await Category.find({
+      type,
+      $or: [{ userId: req.user.id }, { userId: null }],
+    }).select("name");
+    const suggestion = await aiCategorize(
+      note,
+      type,
+      cats.map((c) => c.name)
+    );
+    const match = cats.find((c) => c.name.toLowerCase() === suggestion.name.toLowerCase());
+    if (match) {
+      categoryId = match._id;
+      usedAi = true;
+    }
+  }
+
+  if (!categoryId) throw ApiError.badRequest("categoryId required");
 
   const category = await Category.findOne({
     _id: categoryId,
@@ -61,12 +85,15 @@ export const createTransaction = asyncHandler(async (req, res) => {
     date: date || new Date(),
     isRecurring: !!isRecurring,
     recurringDay: recurringDay || undefined,
+    aiSuggested: usedAi,
   });
 
   let alerts = [];
   if (type === "expense") {
     alerts = await checkBudgetAlerts(req.user.id, categoryId, date);
   }
+
+  emitToUser(req.user.id, "tx:created", { id: tx._id });
 
   const populated = await tx.populate("categoryId", "name type icon color");
   return sendSuccess(res, { transaction: populated, alerts }, "Transaction added", 201);
@@ -119,4 +146,40 @@ export const getTransaction = asyncHandler(async (req, res) => {
     .populate("categoryId", "name type icon color");
   if (!tx) throw ApiError.notFound("Transaction not found");
   return sendSuccess(res, { transaction: tx });
+});
+
+/** Bulk import (CSV) */
+export const importTransactions = asyncHandler(async (req, res) => {
+  const { rows } = req.body; // [{type, amount, categoryId, note, date}]
+  if (!Array.isArray(rows) || rows.length === 0) {
+    throw ApiError.badRequest("rows required");
+  }
+
+  const docs = rows
+    .filter((r) => r.amount > 0 && r.categoryId)
+    .map((r) => ({
+      userId: req.user.id,
+      type: r.type || "expense",
+      amount: Number(r.amount),
+      categoryId: r.categoryId,
+      note: r.note || "",
+      date: r.date ? new Date(r.date) : new Date(),
+      aiSuggested: !!r.aiSuggested,
+    }));
+
+  const created = await Transaction.insertMany(docs, { ordered: false });
+
+  // budget alerts for expense imports
+  for (const tx of created) {
+    if (tx.type === "expense") {
+      await checkBudgetAlerts(req.user.id, tx.categoryId, tx.date);
+    }
+  }
+
+  return sendSuccess(
+    res,
+    { imported: created.length, failed: rows.length - created.length },
+    `Imported ${created.length} transactions`,
+    201
+  );
 });

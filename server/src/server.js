@@ -1,15 +1,21 @@
+import http from "http";
 import app from "./app.js";
 import { env } from "./config/env.js";
 import { connectDB } from "./config/db.js";
 import { seedSystemCategories } from "./seeds/categories.js";
+import { initSocket } from "./config/socket.js";
 
 async function main() {
   await connectDB();
   await seedSystemCategories();
 
-  const server = app.listen(env.PORT, () => {
-    console.log(` Campus Coin API on http://localhost:${env.PORT}`);
-    console.log(` Environment: ${env.NODE_ENV}`);
+  const server = http.createServer(app);
+  initSocket(server);
+
+  server.listen(env.PORT, () => {
+    console.log(`🚀 Campus Coin API on http://localhost:${env.PORT}`);
+    console.log(`🔌 WebSocket on ws://localhost:${env.PORT}`);
+    console.log(`📦 Environment: ${env.NODE_ENV}`);
   });
 
   process.on("SIGINT", async () => {

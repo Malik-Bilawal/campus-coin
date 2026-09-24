@@ -17,7 +17,7 @@ import { useAuthStore } from "@/store/auth";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-export function Topbar() {
+export function Topbar({ live }) {
   const router = useRouter();
   const { theme, toggleTheme, fontSize, setFontSize, toggleSidebar } = useUIStore();
   const { user, logout } = useAuthStore();
@@ -32,6 +32,11 @@ export function Topbar() {
     const interval = setInterval(loadNotifs, 60000);
     return () => clearInterval(interval);
   }, []);
+
+  // Refresh bell when live WS pushes
+  useEffect(() => {
+    if (live) loadNotifs();
+  }, [live]);
 
   async function loadNotifs() {
     try {
@@ -68,6 +73,14 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* Live indicator */}
+        <span
+          title={live ? "Live connected" : "Connecting..."}
+          className={`hidden h-2 w-2 rounded-full sm:block ${
+            live ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" : "animate-pulse bg-amber-500"
+          }`}
+        />
+
         {/* Font size */}
         <div className="relative">
           <button
