@@ -17,7 +17,6 @@ import {
   Hexagon,
   Sparkles,
   Upload,
-  Target,
   LogOut,
 } from "lucide-react";
 import { useUIStore } from "@/store/ui";
@@ -105,7 +104,7 @@ export function Sidebar() {
         )}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center gap-3 border-b border-amber-500/10 px-4">
+        <div className="flex h-16 shrink-0 items-center gap-3 border-b border-amber-500/10 px-4">
           <Link href="/dashboard" className="relative flex h-10 w-10 shrink-0 items-center justify-center">
             <motion.div
               animate={{ rotate: theme === "dark" ? 0 : 360 }}
@@ -127,7 +126,7 @@ export function Sidebar() {
           )}
         </div>
 
-        {/* Nav sections */}
+        {/* Nav sections + streak in scroll flow */}
         <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
           {nav.map((section) => (
             <div key={section.label}>
@@ -144,20 +143,21 @@ export function Sidebar() {
                       key={item.href}
                       href={item.href}
                       onClick={() => {
-                        if (window.innerWidth < 1024 && sidebarOpen) toggleSidebar();
+                        if (typeof window !== "undefined" && window.innerWidth < 1024 && sidebarOpen) {
+                          toggleSidebar();
+                        }
                       }}
                       className={cn(
-                        "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                        "group relative flex items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                         active
-                          ? "bg-gradient-to-r from-honey-500/20 via-honey-500/10 to-transparent text-honey-800 dark:text-honey-200"
+                          ? "bg-gradient-to-r from-honey-500/25 via-honey-500/12 to-transparent text-honey-800 dark:text-honey-200"
                           : "text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
                       )}
                     >
                       {active && (
-                        <motion.span
-                          layoutId="sidebar-hex"
-                          className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-gradient-to-b from-honey-400 to-honey-600 shadow-honey"
-                          transition={{ type: "spring", bounce: 0.3, duration: 0.5 }}
+                        <span
+                          aria-hidden
+                          className="absolute inset-y-0 left-0 my-auto h-6 w-[3px] rounded-r-full bg-gradient-to-b from-honey-400 to-honey-600 shadow-[0_0_8px_rgba(245,158,11,0.7)]"
                         />
                       )}
                       <span
@@ -177,48 +177,58 @@ export function Sidebar() {
               </div>
             </div>
           ))}
+
+          {/* Streak after links (in scroll flow, not sticky) */}
+          {sidebarOpen && user && (
+            <div className="rounded-xl border border-honey-500/20 bg-gradient-to-br from-honey-500/10 to-transparent p-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-zinc-700 dark:text-zinc-200">Streak</span>
+                <span className="font-bold text-honey-600 dark:text-honey-400">
+                  {user.loginStreak || 0} 🔥
+                </span>
+              </div>
+              {user.savingsGoal > 0 && (
+                <div className="mt-2">
+                  <div className="mb-1 flex justify-between text-[10px] text-zinc-500">
+                    <span>Savings goal</span>
+                    <span>
+                      {user.currency} {user.savingsGoal}
+                    </span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+                    <div className="h-full w-1/3 rounded-full bg-gradient-to-r from-honey-500 to-amber-300" />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </nav>
 
-        {/* Streak + goal chip */}
-        {sidebarOpen && user && (
-          <div className="mx-3 mb-2 rounded-xl border border-honey-500/20 bg-gradient-to-br from-honey-500/10 to-transparent p-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-zinc-700 dark:text-zinc-200">Streak</span>
-              <span className="font-bold text-honey-600 dark:text-honey-400">
-                {user.loginStreak || 0} 🔥
-              </span>
-            </div>
-            {user.savingsGoal > 0 && (
-              <div className="mt-2">
-                <div className="mb-1 flex justify-between text-[10px] text-zinc-500">
-                  <span>Savings goal</span>
-                  <span>{user.currency} {user.savingsGoal}</span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-                  <div className="h-full w-1/3 rounded-full bg-gradient-to-r from-honey-500 to-amber-300" />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="border-t border-amber-500/10 p-3">
+        {/* Footer: collapse + logout always visible */}
+        <div className="shrink-0 space-y-2 border-t border-amber-500/10 p-3">
           <button
+            type="button"
             onClick={toggleSidebar}
-            className="mb-2 hidden w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 py-2 text-xs text-zinc-500 transition hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900 lg:flex"
+            aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            className={cn(
+              "flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 py-2.5 text-xs font-medium text-zinc-500 transition hover:border-honey-500/40 hover:bg-honey-500/10 hover:text-honey-700 dark:border-zinc-800 dark:text-zinc-400 dark:hover:text-honey-300",
+              !sidebarOpen && "px-0"
+            )}
           >
             <ChevronLeft className={cn("h-4 w-4 transition-transform", !sidebarOpen && "rotate-180")} />
             {sidebarOpen && "Collapse"}
           </button>
+
           <button
+            type="button"
             onClick={handleLogout}
+            aria-label="Logout"
             className={cn(
-              "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-rose-500 transition hover:bg-rose-500/10",
-              !sidebarOpen && "justify-center"
+              "group flex w-full items-center justify-center gap-2 rounded-xl border border-rose-500/25 bg-rose-500/5 px-3 py-2.5 text-sm font-semibold text-rose-600 transition-all hover:border-rose-500/50 hover:bg-rose-500/15 hover:shadow-[0_0_12px_rgba(244,63,94,0.25)] dark:text-rose-400 dark:hover:text-rose-300",
+              sidebarOpen ? "justify-start" : "px-0"
             )}
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             {sidebarOpen && "Logout"}
           </button>
         </div>

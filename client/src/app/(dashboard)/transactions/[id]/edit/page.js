@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Save, ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -14,7 +14,7 @@ import { SkeletonList } from "@/components/ui/EmptyState";
 import { cn } from "@/lib/utils";
 
 export default function EditTransactionPage({ params }) {
-  const { id } = use(params);
+  const id = params?.id;
   const router = useRouter();
   const addToast = useUIStore((s) => s.addToast);
 
@@ -24,6 +24,7 @@ export default function EditTransactionPage({ params }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (!id) return;
     Promise.all([api.get(`/transactions/${id}`), api.get("/categories")])
       .then(([txRes, catRes]) => {
         const tx = txRes.data.transaction;
@@ -31,7 +32,7 @@ export default function EditTransactionPage({ params }) {
         setForm({
           type: tx.type,
           amount: String(tx.amount),
-          categoryId: tx.categoryId?._id || tx.categoryId,
+          categoryId: tx.categoryId?._id || tx.categoryId || "",
           note: tx.note || "",
           date: new Date(tx.date).toISOString().slice(0, 10),
           isRecurring: !!tx.isRecurring,
@@ -51,17 +52,28 @@ export default function EditTransactionPage({ params }) {
 
   async function onSubmit(e) {
     e.preventDefault();
+    if (!form.amount || Number(form.amount) <= 0) {
+      addToast({ type: "error", message: "Enter a valid amount" });
+      return;
+    }
+    if (!form.categoryId) {
+      addToast({ type: "error", message: "Select a category" });
+      return;
+    }
     setSaving(true);
     try {
-      await api.patch(`/transactions/${id}`, {
+      const payload = {
         type: form.type,
         amount: Number(form.amount),
         categoryId: form.categoryId,
-        note: form.note,
+        note: form.note || "",
         date: new Date(form.date).toISOString(),
-        isRecurring: form.isRecurring,
-        recurringDay: form.isRecurring && form.recurringDay ? Number(form.recurringDay) : undefined,
-      });
+        isRecurring: !!form.isRecurring,
+      };
+      if (form.isRecurring && form.recurringDay) {
+        payload.recurringDay = Number(form.recurringDay);
+      }
+      await api.patch(`/transactions/${id}`, payload);
       addToast({ type: "success", message: "Transaction updated" });
       router.push("/transactions");
     } catch (e) {
