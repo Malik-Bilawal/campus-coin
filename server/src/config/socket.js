@@ -56,6 +56,11 @@ export function emitToUser(userId, event, payload) {
   io.to(`user:${String(userId)}`).emit(event, payload);
 }
 
+export function emitToAll(event, payload) {
+  if (!io) return;
+  io.emit(event, payload);
+}
+
 export function emitNotification(userId, notification) {
   emitToUser(userId, "notification:new", notification);
 }

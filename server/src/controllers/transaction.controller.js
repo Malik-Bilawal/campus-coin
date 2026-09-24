@@ -8,6 +8,7 @@ import { sendSuccess } from "../utils/response.js";
 import { checkBudgetAlerts } from "../services/budgetAlerts.js";
 import { aiCategorize } from "../services/ai/categorize.js";
 import { emitToUser } from "../config/socket.js";
+import { notifyUser } from "../services/notify.js";
 
 export const listTransactions = asyncHandler(async (req, res) => {
   const { type, categoryId, from, to, q, page = 1, limit = 20 } = req.query;
@@ -175,6 +176,14 @@ export const importTransactions = asyncHandler(async (req, res) => {
       await checkBudgetAlerts(req.user.id, tx.categoryId, tx.date);
     }
   }
+
+  await notifyUser(req.user.id, {
+    type: "import",
+    title: "CSV import complete",
+    message: `Imported ${created.length} transactions${
+      rows.length - created.length ? ` (${rows.length - created.length} skipped)` : ""
+    }.`,
+  });
 
   return sendSuccess(
     res,

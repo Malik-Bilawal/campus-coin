@@ -1,7 +1,8 @@
+import { Notification } from "../models/Notification.js";
 import { Budget } from "../models/Budget.js";
 import { Transaction } from "../models/Transaction.js";
-import { Notification } from "../models/Notification.js";
-import { emitNotification, emitBudgetUpdate } from "../config/socket.js";
+import { emitBudgetUpdate } from "../config/socket.js";
+import { notifyUser } from "./notify.js";
 
 function monthKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -47,9 +48,8 @@ export async function checkBudgetAlerts(userId, categoryId, date) {
       percentage: pct,
     });
 
-    // Only notify once per level per month per category via latest unread check
     if (pct >= 100) {
-      const msg = `🚨 ${catName} budget exceeded! Spent ${spent.toFixed(0)} / ${budget.limit.toFixed(0)}`;
+      const msg = `${catName} budget exceeded! Spent ${spent.toFixed(0)} / ${budget.limit.toFixed(0)}`;
       const existing = await Notification.findOne({
         userId,
         type: "budget_alert",
@@ -57,12 +57,11 @@ export async function checkBudgetAlerts(userId, categoryId, date) {
         read: false,
       });
       if (!existing) {
-        const n = await Notification.create({ userId, type: "budget_alert", message: msg });
-        emitNotification(userId, n.toObject());
+        await notifyUser(userId, { type: "budget_alert", title: "Budget exceeded", message: msg });
       }
       alerts.push({ level: "exceeded", message: msg, percentage: 100 });
     } else if (pct >= 80) {
-      const msg = `⚠️ ${catName} budget at ${pct}% (${spent.toFixed(0)} / ${budget.limit.toFixed(0)})`;
+      const msg = `${catName} budget at ${pct}% (${spent.toFixed(0)} / ${budget.limit.toFixed(0)})`;
       const existing = await Notification.findOne({
         userId,
         type: "budget_alert",
@@ -70,8 +69,7 @@ export async function checkBudgetAlerts(userId, categoryId, date) {
         read: false,
       });
       if (!existing) {
-        const n = await Notification.create({ userId, type: "budget_alert", message: msg });
-        emitNotification(userId, n.toObject());
+        await notifyUser(userId, { type: "budget_alert", title: "Budget warning", message: msg });
       }
       alerts.push({ level: "warning", message: msg, percentage: pct });
     }

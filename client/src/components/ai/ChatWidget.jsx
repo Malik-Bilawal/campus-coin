@@ -9,8 +9,15 @@ import { useAuthStore } from "@/store/auth";
 const WELCOME = {
   role: "assistant",
   content:
-    "Hi! I'm BudgetBee 🐝 — ask me about your spending, budgets, or how features work.",
+    "Hi! I'm BudgetBee 🐝 — your personal finance advisor.\n\nAsk me things like:\n• Should I buy a phone for 25000 this month?\n• How much can I spend today?\n• Am I on track for my savings goal?\n• Where did my money go?",
 };
+
+const CHIPS = [
+  "Should I buy a phone for 25000 this month?",
+  "How much can I spend today?",
+  "Where did my money go?",
+  "Am I on track for my goal?",
+];
 
 function storageKey(userId) {
   return `cc-chat-${userId}`;
@@ -138,7 +145,7 @@ export function ChatWidget() {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-bold">BudgetBee</p>
-                <p className="text-[10px] text-zinc-400">AI assistant · history saved locally</p>
+                <p className="text-[10px] text-zinc-400">Personal finance advisor · local history</p>
               </div>
               <button
                 type="button"
@@ -173,6 +180,20 @@ export function ChatWidget() {
                   </div>
                 </motion.div>
               ))}
+              {messages.length <= 1 && !loading && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {CHIPS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setInput(c)}
+                      className="rounded-full border border-honey-500/30 bg-honey-500/10 px-2.5 py-1 text-[11px] text-honey-700 transition hover:bg-honey-500/20 dark:text-honey-300"
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              )}
               {loading && (
                 <div className="flex gap-1.5 px-2">
                   {[0, 1, 2].map((i) => (
@@ -192,7 +213,7 @@ export function ChatWidget() {
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask about your spending..."
+                placeholder="Should I buy… / How much left today?"
                 className="input-field flex-1"
                 disabled={loading}
               />

@@ -3,7 +3,21 @@ import mongoose from "mongoose";
 const notificationSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    type: { type: String, enum: ["budget_alert", "info", "achievement"], default: "info" },
+    type: {
+      type: String,
+      enum: [
+        "budget_alert",
+        "category",
+        "budget",
+        "import",
+        "announcement",
+        "transaction",
+        "info",
+        "achievement",
+      ],
+      default: "info",
+    },
+    title: { type: String, maxlength: 80 },
     message: { type: String, required: true, maxlength: 300 },
     read: { type: Boolean, default: false },
   },

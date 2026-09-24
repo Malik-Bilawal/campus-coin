@@ -14,15 +14,17 @@ import {
 } from "lucide-react";
 import { useUIStore } from "@/store/ui";
 import { useAuthStore } from "@/store/auth";
-import { api } from "@/lib/api";
+import { useNotificationStore } from "@/store/notifications";
 import { cn } from "@/lib/utils";
 
 export function Topbar({ live }) {
   const router = useRouter();
   const { theme, toggleTheme, fontSize, setFontSize, toggleSidebar } = useUIStore();
   const { user, logout } = useAuthStore();
-  const [notifs, setNotifs] = useState([]);
-  const [unread, setUnread] = useState(0);
+  const notifs = useNotificationStore((s) => s.items);
+  const unread = useNotificationStore((s) => s.unread);
+  const loadNotifs = useNotificationStore((s) => s.load);
+  const markAllRead = useNotificationStore((s) => s.markAllRead);
   const [showNotifs, setShowNotifs] = useState(false);
   const [showUser, setShowUser] = useState(false);
   const [showFont, setShowFont] = useState(false);
@@ -31,22 +33,12 @@ export function Topbar({ live }) {
     loadNotifs();
     const interval = setInterval(loadNotifs, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadNotifs]);
 
-  // Refresh bell when live WS pushes
+  // Refresh bell when live WS connects
   useEffect(() => {
     if (live) loadNotifs();
-  }, [live]);
-
-  async function loadNotifs() {
-    try {
-      const res = await api.get("/notifications");
-      setNotifs(res.data.notifications);
-      setUnread(res.data.unread);
-    } catch {
-      /* ignore */
-    }
-  }
+  }, [live, loadNotifs]);
 
   async function handleLogout() {
     await logout();
@@ -168,8 +160,7 @@ export function Topbar({ live }) {
                   {unread > 0 && (
                     <button
                       onClick={async () => {
-                        await api.patch("/notifications/read-all");
-                        loadNotifs();
+                        await markAllRead();
                       }}
                       className="text-xs text-honey-600 hover:underline"
                     >
@@ -188,7 +179,12 @@ export function Topbar({ live }) {
                         !n.read && "bg-honey-500/10"
                       )}
                     >
-                      <p className="text-zinc-700 dark:text-zinc-200">{n.message}</p>
+                      {n.title && (
+                        <p className="font-semibold text-zinc-800 dark:text-zinc-100">{n.title}</p>
+                      )}
+                      <p className={n.title ? "mt-0.5 text-zinc-700 dark:text-zinc-200" : "text-zinc-700 dark:text-zinc-200"}>
+                        {n.message}
+                      </p>
                       <p className="mt-1 text-[10px] text-zinc-400">
                         {new Date(n.createdAt).toLocaleString()}
                       </p>

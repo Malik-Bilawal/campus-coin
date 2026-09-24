@@ -7,6 +7,7 @@ import { ApiError } from "../utils/apiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { sendSuccess } from "../utils/response.js";
 import { User as UserModel } from "../models/User.js";
+import { broadcastNotification } from "../services/notify.js";
 
 export const getStats = asyncHandler(async (req, res) => {
   const [users, transactions, categories, topCategories, activeUsers] = await Promise.all([
@@ -136,11 +137,19 @@ export const listAnnouncements = asyncHandler(async (req, res) => {
 
 export const createAnnouncement = asyncHandler(async (req, res) => {
   const { title, body, active } = req.body;
+  const isActive = active !== false;
   const announcement = await Announcement.create({
     title,
     body,
-    active: active !== false,
+    active: isActive,
   });
+  if (isActive) {
+    await broadcastNotification({
+      type: "announcement",
+      title,
+      message: `${title} — ${body}`,
+    });
+  }
   return sendSuccess(res, { announcement }, "Announcement created", 201);
 });
 

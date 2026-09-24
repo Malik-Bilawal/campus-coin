@@ -4,16 +4,27 @@ import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { useAuthStore } from "@/store/auth";
 import { useUIStore } from "@/store/ui";
+import { useNotificationStore } from "@/store/notifications";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:5000";
 
 let socket = null;
 
+const TOAST_TYPES = {
+  budget_alert: "warning",
+  budget: "info",
+  category: "success",
+  import: "success",
+  announcement: "info",
+  achievement: "success",
+  transaction: "info",
+  info: "info",
+};
+
 export function useSocket() {
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
   const [connected, setConnected] = useState(false);
-  const handlers = useRef(new Set());
 
   useEffect(() => {
     if (!user) {
@@ -33,9 +44,6 @@ export function useSocket() {
       });
     }
 
-    // token from cookie is httpOnly — pass via handshake if we have access token in memory
-    // auth store may only have user; use refresh-free approach: send cookie-based not supported by socket.io easily
-    // We store accessToken on login in memory via auth store if present
     const token =
       useAuthStore.getState().accessToken ||
       (typeof window !== "undefined" && sessionStorage.getItem("accessToken")) ||
@@ -47,21 +55,32 @@ export function useSocket() {
     const onConnect = () => setConnected(true);
     const onDisconnect = () => setConnected(false);
     const onNotify = (n) => {
+      useNotificationStore.getState().pushLive(n);
       addToast({
-        type: n.type === "budget_alert" ? "warning" : "info",
-        message: n.message,
-        title: "Live alert",
+        type: TOAST_TYPES[n?.type] || "info",
+        title: n?.title || "Live alert",
+        message: n?.message,
       });
+    };
+    const onAnnouncement = () => {
+      useNotificationStore.getState().loadAnnouncements();
+    };
+    const onBudget = () => {
+      /* optional page-level listeners can subscribe via `on` */
     };
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("notification:new", onNotify);
+    socket.on("announcement:new", onAnnouncement);
+    socket.on("budget:updated", onBudget);
 
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("notification:new", onNotify);
+      socket.off("announcement:new", onAnnouncement);
+      socket.off("budget:updated", onBudget);
     };
   }, [user, addToast]);
 

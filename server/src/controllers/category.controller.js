@@ -3,6 +3,7 @@ import { Transaction } from "../models/Transaction.js";
 import { ApiError } from "../utils/apiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { sendSuccess } from "../utils/response.js";
+import { notifyUser } from "../services/notify.js";
 
 export const listCategories = asyncHandler(async (req, res) => {
   const { type } = req.query;
@@ -32,6 +33,11 @@ export const createCategory = asyncHandler(async (req, res) => {
     color: color || "#F59E0B",
     isDefault: false,
   });
+  await notifyUser(req.user.id, {
+    type: "category",
+    title: "Category created",
+    message: `New ${type} category “${category.name}” is ready to use.`,
+  });
   return sendSuccess(res, { category }, "Category created", 201);
 });
 
@@ -48,6 +54,11 @@ export const updateCategory = asyncHandler(async (req, res) => {
   if (color) category.color = color;
   if (type) category.type = type;
   await category.save();
+  await notifyUser(req.user.id, {
+    type: "category",
+    title: "Category updated",
+    message: `Category “${category.name}” was updated.`,
+  });
 
   return sendSuccess(res, { category }, "Category updated");
 });

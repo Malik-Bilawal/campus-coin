@@ -5,6 +5,8 @@ import { Transaction } from "../models/Transaction.js";
 import { ApiError } from "../utils/apiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { sendSuccess } from "../utils/response.js";
+import { notifyUser } from "../services/notify.js";
+import { emitBudgetUpdate } from "../config/socket.js";
 
 function monthString(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -59,11 +61,31 @@ export const upsertBudget = asyncHandler(async (req, res) => {
     { new: true, upsert: true, runValidators: true }
   ).populate("categoryId", "name type icon color");
 
+  const catName = budget.categoryId?.name || "Category";
+  await notifyUser(req.user.id, {
+    type: "budget",
+    title: "Budget saved",
+    message: `${m} budget for ${catName} set to ${limit}.`,
+  });
+  emitBudgetUpdate(req.user.id, {
+    categoryId: String(categoryId),
+    month: m,
+    limit,
+    spent: 0,
+  });
+
   return sendSuccess(res, { budget }, "Budget saved", 201);
 });
 
 export const deleteBudget = asyncHandler(async (req, res) => {
-  const budget = await Budget.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+  const budget = await Budget.findOneAndDelete({ _id: req.params.id, userId: req.user.id })
+    .populate("categoryId", "name");
   if (!budget) throw ApiError.notFound("Budget not found");
+  const catName = budget.categoryId?.name || "Category";
+  await notifyUser(req.user.id, {
+    type: "budget",
+    title: "Budget removed",
+    message: `${budget.month} budget for ${catName} was deleted.`,
+  });
   return sendSuccess(res, null, "Budget deleted");
 });

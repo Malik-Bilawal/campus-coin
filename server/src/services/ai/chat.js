@@ -1,6 +1,14 @@
 import { buildMonthStats } from "./insight.js";
 import { llmChat } from "./provider.js";
 import { User } from "../../models/User.js";
+import {
+  buildFinanceContext,
+  detectIntent,
+  extractAmount,
+  rulePurchaseAdvice,
+  ruleSpendingAnswer,
+  ruleForecast,
+} from "./financeContext.js";
 
 const FAQ = [
   {
@@ -37,6 +45,10 @@ const FAQ = [
     keys: ["forgot", "password", "reset"],
     answer: "Use Forgot password on the login page. In dev, the reset link appears on screen.",
   },
+  {
+    keys: ["import", "csv", "upload"],
+    answer: "Transactions → CSV import. Upload, optionally AI-categorize, then confirm import.",
+  },
 ];
 
 function matchFaq(message) {
@@ -50,86 +62,161 @@ function matchFaq(message) {
       best = item;
     }
   }
-  return bestScore > 0 ? best.answer : null;
+  return bestScore >= 2 || (bestScore === 1 && best.keys[0].length > 6)
+    ? best.answer
+    : null;
 }
 
-async function personalAnswer(userId, message) {
-  const user = await User.findById(userId);
-  const lower = message.toLowerCase();
-  const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const stats = await buildMonthStats(userId, monthKey);
+function compactCtx(ctx) {
+  return {
+    today: ctx.today,
+    month: ctx.month,
+    daysLeft: ctx.daysLeft,
+    name: ctx.profile.name,
+    currency: ctx.profile.currency,
+    savingsGoal: ctx.profile.savingsGoal,
+    goalProgressPct: ctx.profile.goalProgress,
+    allowanceBaseline: ctx.profile.allowanceBaseline,
+    income: ctx.money.income,
+    expense: ctx.money.expense,
+    saved: ctx.money.saved,
+    safeToSpend: ctx.money.safeToSpend,
+    dailyBurn: ctx.money.dailyBurn,
+    projectedEomExpense: ctx.money.projectedEomExpense,
+    budgets: ctx.budgets.map((b) => ({
+      cat: b.category,
+      limit: b.limit,
+      spent: b.spent,
+      pct: b.pct,
+      status: b.status,
+    })),
+    topCategories: ctx.topCategories,
+    flags: ctx.flags,
+    largestExpenses: ctx.largestExpenses.slice(0, 5),
+  };
+}
 
-  const wantsMoney =
-    /spen|spent|cost|how much|balance|save|saved|afford|left|budget|income|expense|food|top/.test(
-      lower
+const ADVISOR_SYSTEM = `You are BudgetBee, BudgetBee's personal finance advisor for students inside Campus Coin.
+You are practical, warm, and specific — never generic.
+
+Rules:
+- Use ONLY the JSON financial context provided. Invent no numbers.
+- Currency is in the context. Quote amounts as plain numbers with the currency code.
+- For purchase questions ("should I buy X"): give a clear verdict first line: Yes / Yes with a check / Wait / Not this month / No — too tight.
+- Then 2-4 short bullets: remaining money, daily burn / days left, impact on savings goal, and one concrete alternative (delay, EMI, sale, cut a category).
+- For spending/budget/goal questions: answer with their actual numbers and one actionable next step.
+- Max ~120 words. No markdown headers. No disclaimer essays. Advisory only.
+- If the message is feature help (how to use the app), answer briefly without inventing stats.
+- If amount is missing for a purchase, ask for the price AND still show their current safe-to-spend.`;
+
+async function personalAdvisor(userId, message, history, intents) {
+  const ctx = await buildFinanceContext(userId);
+  const amount = extractAmount(message);
+  const isFinance =
+    intents.length > 0 ||
+    /spen|spent|cost|how much|balance|save|saved|afford|left|budget|income|expense|buy|price|goal|forecast|invest|phone|laptop|money|cash|allowance/i.test(
+      message
     );
 
-  if (!wantsMoney) return null;
+  if (!isFinance) return null;
+
+  const rule =
+    intents.includes("purchase") && amount != null
+      ? rulePurchaseAdvice(ctx, amount, message)
+      : intents.includes("purchase")
+        ? rulePurchaseAdvice(ctx, null, message)
+        : intents.includes("forecast")
+          ? { verdict: "Forecast", body: ruleForecast(ctx), source: "rules" }
+          : intents.some((i) => ["spending", "budget", "goal", "advice"].includes(i))
+            ? { verdict: "", body: ruleSpendingAnswer(ctx), source: "rules" }
+            : null;
 
   try {
-    const { content } = await llmChat(
+    const { content, provider } = await llmChat(
       [
-        {
-          role: "system",
-          content:
-            "You are BudgetBee. Answer the student's money question using ONLY the JSON stats provided. Be concise (2-4 sentences). Friendly. Advisory only.",
-        },
+        { role: "system", content: ADVISOR_SYSTEM },
         {
           role: "user",
-          content: `Question: ${message}\nName: ${user?.name}\nSavings goal: ${user?.savingsGoal}\nStats: ${JSON.stringify(
-            {
-              month: stats.month,
-              income: stats.income,
-              expense: stats.expense,
-              saved: stats.saved,
-              categories: stats.byCategory.slice(0, 8),
-              flags: stats.flags,
-            }
-          )}`,
+          content: `Financial context JSON:\n${JSON.stringify(compactCtx(ctx))}\n\nDetected intents: ${
+            intents.join(", ") || "general"
+          }\nExtracted purchase amount: ${amount ?? "n/a"}\n\nQuestion: ${message}`,
         },
       ],
-      { temperature: 0.4, maxTokens: 350, timeoutMs: 10000 }
+      {
+        temperature: 0.35,
+        maxTokens: 450,
+        timeoutMs: 12000,
+      }
     );
-    return content.trim();
+
+    let reply = content.trim();
+    if (intents.includes("purchase") && amount != null && !/^(yes|wait|no)/i.test(reply)) {
+      const r = rulePurchaseAdvice(ctx, amount, message);
+      if (r.verdict && r.verdict !== "Need price") {
+        reply = `${r.verdict}\n${reply}`;
+      }
+    }
+    return { reply, source: `ai-advisor:${provider}` };
   } catch {
-    const top = stats.byCategory[0];
-    return `This month (${monthKey}): income ${stats.income.toFixed(0)}, spent ${stats.expense.toFixed(0)}, ${
-      stats.saved >= 0 ? `saved ${stats.saved.toFixed(0)}` : `over by ${Math.abs(stats.saved).toFixed(0)}`
-    }.${top ? ` Top category ${top.name} (${top.total.toFixed(0)}).` : ""}`;
+    if (rule) return { reply: rule.body, source: rule.source };
+    return {
+      reply: ruleSpendingAnswer(ctx),
+      source: "rules",
+    };
   }
 }
 
 export async function aiChat(userId, message, history = []) {
-  const faq = matchFaq(message);
-  const personal = await personalAnswer(userId, message);
+  const intents = detectIntent(message);
+  const lower = message.toLowerCase();
+
+  const personal = await personalAdvisor(userId, message, history, intents);
 
   if (personal) {
-    return { reply: personal, source: "ai-personal" };
-  }
-  if (faq) {
-    return { reply: faq, source: "faq" };
+    return { reply: personal.reply, source: personal.source };
   }
 
+  const faq = matchFaq(message);
+  if (faq) return { reply: faq, source: "faq" };
+
   try {
+    const user = await User.findById(userId).select("name currency").lean();
+    const stats = await buildMonthStats(
+      userId,
+      `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`
+    );
     const messages = [
       {
         role: "system",
         content:
-          "You are BudgetBee inside Campus Coin, a student budget app. Answer briefly (1-3 sentences). If asked about features not built, say so honestly. Advisory only.",
+          "You are BudgetBee inside Campus Coin, a student budget app. Answer briefly (1-3 sentences) using the light stats only if money-related. Advisory only. If asked about unbuilt features, say so honestly.",
       },
       ...history.slice(-6).map((h) => ({
         role: h.role === "assistant" ? "assistant" : "user",
         content: h.content,
       })),
-      { role: "user", content: message },
+      {
+        role: "user",
+        content: `Student: ${user?.name || ""} (${user?.currency || "BDT"})\nMonth stats: ${JSON.stringify(
+          {
+            income: stats.income,
+            expense: stats.expense,
+            saved: stats.saved,
+            top: stats.byCategory.slice(0, 5),
+          }
+        )}\nQuestion: ${message}`,
+      },
     ];
-    const { content } = await llmChat(messages, { temperature: 0.5, maxTokens: 300, timeoutMs: 10000 });
-    return { reply: content.trim(), source: "ai" };
+    const { content, provider } = await llmChat(messages, {
+      temperature: 0.5,
+      maxTokens: 300,
+      timeoutMs: 10000,
+    });
+    return { reply: content.trim(), source: `ai:${provider}` };
   } catch {
     return {
       reply:
-        "I can help with budgets, categories, reports, and your spending summary. Try: “How much did I spend on food?” or “How do I set a budget?”",
+        "I can advise on purchases, budgets, spending, and goals using your real data. Try:\n• “Should I buy a phone for 25000 this month?”\n• “How much can I spend today?”\n• “Am I on track for my savings goal?”\n• “How do I set a budget?”",
       source: "fallback",
     };
   }

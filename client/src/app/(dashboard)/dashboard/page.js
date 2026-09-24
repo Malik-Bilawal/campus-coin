@@ -20,6 +20,7 @@ import { Card, StatCard, CardHeader } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SkeletonList } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
+import { AnnouncementBanner } from "@/components/ui/AnnouncementBanner";
 import { celebrate } from "@/lib/confetti";
 
 export default function DashboardPage() {
@@ -111,6 +112,8 @@ export default function DashboardPage() {
           </>
         }
       />
+
+      <AnnouncementBanner />
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
