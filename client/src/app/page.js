@@ -275,35 +275,42 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-32 left-1/4 h-96 w-96 rounded-full bg-honey-500/20 blur-3xl" />
-          <div className="absolute right-1/5 top-40 h-72 w-72 rounded-full bg-amber-400/15 blur-3xl" />
+          <div className="absolute -top-40 left-1/4 h-[28rem] w-[28rem] rounded-full bg-honey-500/25 blur-[100px]" />
+          <div className="absolute right-1/5 top-40 h-80 w-80 rounded-full bg-amber-400/18 blur-3xl" />
+          <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-emerald-500/8 blur-3xl" />
           <div
-            className="absolute inset-0 opacity-[0.04] dark:opacity-[0.06]"
+            className="absolute inset-0 opacity-[0.05] dark:opacity-[0.07]"
             style={{
-              backgroundImage:
-                "linear-gradient(rgba(245,158,11,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(245,158,11,0.6) 1px, transparent 1px)",
-              backgroundSize: "56px 56px",
-              maskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)",
+              backgroundImage: "radial-gradient(rgba(245,158,11,0.9) 1px, transparent 1px)",
+              backgroundSize: "32px 32px",
+              maskImage: "radial-gradient(ellipse at center, black 20%, transparent 70%)",
             }}
+          />
+          <div
+            className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-zinc-50 to-transparent dark:from-zinc-950"
           />
         </div>
 
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-24 pt-16 lg:grid-cols-2 lg:gap-8 lg:pt-24">
+        <div className="mx-auto grid max-w-6xl items-center gap-14 px-6 pb-24 pt-16 lg:grid-cols-2 lg:gap-10 lg:pt-24">
           <div className="text-center lg:text-left">
             <motion.span
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45 }}
-              className="mb-6 inline-flex items-center gap-2 rounded-full border border-honey-500/30 bg-honey-500/10 px-4 py-1.5 text-xs font-medium text-honey-700 dark:text-honey-300"
+              className="mb-6 inline-flex items-center gap-2 rounded-full border border-honey-500/35 bg-honey-500/12 px-4 py-1.5 text-xs font-semibold tracking-wide text-honey-700 dark:text-honey-300"
             >
-              <Sparkles className="h-3.5 w-3.5" /> NextGen BudgetBee · End-to-End Web Solutions
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-honey-400 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-honey-400" />
+              </span>
+              NextGen BudgetBee · OTP-verified signup
             </motion.span>
 
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.08, duration: 0.55 }}
-              className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-[3.4rem] lg:leading-[1.08]"
+              className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-[3.5rem] lg:leading-[1.06]"
             >
               Take control of your{" "}
               <span className="bg-gradient-to-r from-honey-500 via-amber-400 to-honey-300 bg-clip-text text-transparent">
@@ -328,7 +335,7 @@ export default function LandingPage() {
               transition={{ delay: 0.24, duration: 0.55 }}
               className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start"
             >
-              <Link href="/register" className="btn-honey px-6 py-3 text-base">
+              <Link href="/register" className="btn-honey px-6 py-3 text-base shadow-honey">
                 Start free <ArrowRight className="h-4 w-4" />
               </Link>
               <Link href="/login" className="btn-ghost px-6 py-3 text-base">
@@ -340,13 +347,13 @@ export default function LandingPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.5 }}
-              className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-zinc-400 lg:justify-start"
+              className="mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-zinc-400 lg:justify-start"
             >
               <span className="inline-flex items-center gap-1.5">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Free forever for students
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> No card required
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Email OTP verification
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Dark mode default

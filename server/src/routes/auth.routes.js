@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  requestOtp,
   register,
   login,
   logout,
@@ -11,6 +12,7 @@ import {
 import { protect } from "../middlewares/auth.js";
 import { validate } from "../middlewares/validate.js";
 import {
+  requestOtpSchema,
   registerSchema,
   loginSchema,
   forgotSchema,
@@ -20,6 +22,7 @@ import { authLimiter } from "../middlewares/rateLimit.js";
 
 const router = Router();
 
+router.post("/request-otp", authLimiter, validate(requestOtpSchema), requestOtp);
 router.post("/register", authLimiter, validate(registerSchema), register);
 router.post("/login", authLimiter, validate(loginSchema), login);
 router.post("/logout", logout);

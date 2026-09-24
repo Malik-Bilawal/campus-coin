@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { User } from "../models/User.js";
+import { PendingRegistration } from "../models/PendingRegistration.js";
 import { ApiError } from "../utils/apiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { sendSuccess } from "../utils/response.js";
@@ -8,6 +9,7 @@ import { createUserDefaultCategories } from "../seeds/categories.js";
 import { env } from "../config/env.js";
 
 const REFRESH_COOKIE = "refreshToken";
+const OTP_TTL_MS = 10 * 60 * 1000;
 
 function setAuthCookies(res, userId, role, email) {
   const access = signAccessToken({ sub: userId, role, email });
@@ -31,22 +33,84 @@ function setAuthCookies(res, userId, role, email) {
   return { accessToken: access, refreshToken: refresh };
 }
 
-export const register = asyncHandler(async (req, res) => {
+export const requestOtp = asyncHandler(async (req, res) => {
   const { name, email, password, academicYear, allowanceBaseline, savingsGoal, currency } = req.body;
 
   const exists = await User.findOne({ email: email.toLowerCase() });
   if (exists) throw ApiError.conflict("Email already registered");
 
+  const otp = String(crypto.randomInt(100000, 1000000));
+  const passwordHash = await User.hashPassword(password);
+  const otpHash = PendingRegistration.hashOtp(otp);
+  const otpExpires = new Date(Date.now() + OTP_TTL_MS);
+
+  await PendingRegistration.findOneAndUpdate(
+    { email: email.toLowerCase() },
+    {
+      name,
+      email: email.toLowerCase(),
+      password: passwordHash,
+      academicYear: academicYear || "",
+      allowanceBaseline: Number(allowanceBaseline) || 0,
+      savingsGoal: Number(savingsGoal) || 0,
+      currency: currency || "BDT",
+      otpHash,
+      otpExpires,
+      attempts: 0,
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  // No SMTP in this project yet — surface OTP in dev for demo/judges
+  if (env.NODE_ENV === "development") {
+    console.log(`[OTP] ${email} → ${otp} (expires ${otpExpires.toISOString()})`);
+  }
+
+  return sendSuccess(
+    res,
+    { devOtp: env.NODE_ENV === "development" ? otp : undefined, expiresInMin: 10 },
+    "Verification code sent to your email"
+  );
+});
+
+export const register = asyncHandler(async (req, res) => {
+  const { email, otp } = req.body;
+
+  const pending = await PendingRegistration.findOne({
+    email: email.toLowerCase(),
+  }).select("+otpHash");
+
+  if (!pending) {
+    throw ApiError.badRequest("No pending registration. Request a new verification code.");
+  }
+  if (!pending.otpExpires || pending.otpExpires < new Date()) {
+    await PendingRegistration.deleteOne({ _id: pending._id });
+    throw ApiError.badRequest("Verification code expired. Request a new one.");
+  }
+  if (pending.attempts >= 5) {
+    await PendingRegistration.deleteOne({ _id: pending._id });
+    throw ApiError.badRequest("Too many attempts. Start registration again.");
+  }
+  if (!pending.verifyOtp(otp)) {
+    pending.attempts += 1;
+    await pending.save({ validateBeforeSave: false });
+    const left = 5 - pending.attempts;
+    throw ApiError.badRequest(
+      left > 0 ? `Invalid verification code. ${left} attempt(s) left.` : "Too many attempts."
+    );
+  }
+
   const user = await User.create({
-    name,
-    email,
-    password: await User.hashPassword(password),
-    academicYear,
-    allowanceBaseline,
-    savingsGoal,
-    currency,
+    name: pending.name,
+    email: pending.email,
+    password: pending.password,
+    academicYear: pending.academicYear,
+    allowanceBaseline: pending.allowanceBaseline,
+    savingsGoal: pending.savingsGoal,
+    currency: pending.currency,
   });
 
+  await PendingRegistration.deleteOne({ _id: pending._id });
   await createUserDefaultCategories(user._id);
 
   const tokens = setAuthCookies(res, user._id, user.role, user.email);

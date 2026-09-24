@@ -1,25 +1,84 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, ArrowRight, ArrowLeft, User, Target, CheckCircle2 } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ArrowLeft,
+  CheckCircle2,
+  MailCheck,
+  ShieldCheck,
+} from "lucide-react";
 import { useAuthStore } from "@/store/auth";
 import { useUIStore } from "@/store/ui";
 import { Input, Select } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { CURRENCIES } from "@/lib/utils";
+import { api } from "@/lib/api";
 import { AuthShell, AuthError, StepDots } from "@/components/auth/AuthShell";
 import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import { celebrate } from "@/lib/confetti";
 
-const stepMeta = [
-  { title: "Create your account", subtitle: "Step 1 of 2 · Your identity", icon: User },
-  { title: "Money profile", subtitle: "Step 2 of 2 · Optional, improves tips", icon: Target },
+const steps = [
+  { title: "Create your account", subtitle: "Step 1 of 3 · Your identity" },
+  { title: "Verify your email", subtitle: "Step 2 of 3 · One-time code" },
+  { title: "Money profile", subtitle: "Step 3 of 3 · Optional, improves tips" },
 ];
 
-export default function RegisterPage() {
+function OtpBoxes({ value, onChange }) {
+  const digits = value.padEnd(6, " ").slice(0, 6).split("");
+
+  function handleChange(i, e) {
+    const raw = e.target.value.replace(/\D/g, "");
+    if (!raw) return;
+    const next = value.padEnd(6, " ").split("");
+    for (let k = 0; k < raw.length && i + k < 6; k++) next[i + k] = raw[k];
+    onChange(next.join("").replace(/\s/g, "").slice(0, 6));
+    const boxes = document.querySelectorAll<HTMLInputElement>("[data-otp-box]");
+    boxes[Math.min(i + raw.length, 5)]?.focus();
+  }
+
+  function handleKeyDown(i, e) {
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      const boxes = document.querySelectorAll<HTMLInputElement>("[data-otp-box]");
+      const next = value.padEnd(6, " ").split("");
+      if (next[i] && next[i] !== " ") {
+        next[i] = " ";
+        onChange(next.join("").replace(/\s/g, ""));
+      } else if (i > 0) {
+        next[i - 1] = " ";
+        onChange(next.join("").replace(/\s/g, ""));
+        boxes[i - 1]?.focus();
+      }
+    }
+  }
+
+  return (
+    <div className="flex justify-center gap-2 sm:gap-3">
+      {digits.map((d, i) => (
+        <input
+          key={i}
+          data-otp-box
+          inputMode="numeric"
+          maxLength={1}
+          value={d === " " ? "" : d}
+          onChange={(e) => handleChange(i, e)}
+          onKeyDown={(e) => handleKeyDown(i, e)}
+          onFocus={(e) => e.target.select()}
+          className="h-12 w-10 rounded-xl border border-zinc-200 bg-white text-center text-lg font-bold tabular-nums text-zinc-900 outline-none transition focus:border-honey-500 focus:ring-2 focus:ring-honey-500/20 dark:border-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-100 sm:h-14 sm:w-12"
+          aria-label={`OTP digit ${i + 1}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function RegisterForm() {
   const router = useRouter();
   const register = useAuthStore((s) => s.register);
   const addToast = useUIStore((s) => s.addToast);
@@ -35,22 +94,66 @@ export default function RegisterPage() {
     savingsGoal: "",
     currency: "BDT",
   });
+  const [otp, setOtp] = useState("");
+  const [devOtp, setDevOtp] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [resendIn, setResendIn] = useState(0);
+  const resendTimer = useRef(null);
+
+  useEffect(() => () => clearInterval(resendTimer.current), []);
 
   function set(key, val) {
     setForm((f) => ({ ...f, [key]: val }));
   }
 
-  function goNext(e) {
-    e.preventDefault();
+  async function requestOtp(e) {
+    e?.preventDefault?.();
     setError("");
     if (!form.name.trim()) return setError("Please enter your name");
     if (!form.email.trim()) return setError("Please enter your email");
     if (form.password.length < 6) return setError("Password must be at least 6 characters");
     if (form.password !== form.confirmPassword) return setError("Passwords do not match");
-    setStep(1);
+
+    setLoading(true);
+    try {
+      const res = await api.post("/auth/request-otp", {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        academicYear: form.academicYear,
+        allowanceBaseline: Number(form.allowanceBaseline) || 0,
+        savingsGoal: Number(form.savingsGoal) || 0,
+        currency: form.currency,
+      });
+      setDevOtp(res.data?.devOtp || "");
+      setOtp("");
+      setStep(1);
+      setResendIn(30);
+      if (resendTimer.current) clearInterval(resendTimer.current);
+      resendTimer.current = setInterval(() => {
+        setResendIn((s) => {
+          if (s <= 1) {
+            clearInterval(resendTimer.current);
+            return 0;
+          }
+          return s - 1;
+        });
+      }, 1000);
+      addToast({ type: "success", message: res.message || "Code sent" });
+    } catch (err) {
+      setError(err.message || "Could not send code");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function confirmOtp(e) {
+    e.preventDefault();
+    setError("");
+    if (otp.replace(/\D/g, "").length !== 6) return setError("Enter the 6-digit code");
+    setStep(2);
   }
 
   async function onSubmit(e) {
@@ -58,24 +161,19 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
     try {
-      const { confirmPassword, ...payload } = form;
-      await register({
-        ...payload,
-        allowanceBaseline: Number(payload.allowanceBaseline) || 0,
-        savingsGoal: Number(payload.savingsGoal) || 0,
-      });
+      await register({ email: form.email.trim(), otp: otp.replace(/\D/g, "") });
       celebrate({ particleCount: 80, origin: { y: 0.6 } });
       addToast({ type: "success", message: "Account created — welcome to Campus Coin!" });
       router.push("/dashboard");
     } catch (err) {
       setError(err.message || "Registration failed");
-      setStep(0);
+      setStep(1);
     } finally {
       setLoading(false);
     }
   }
 
-  const meta = stepMeta[step];
+  const meta = steps[step];
 
   return (
     <AuthShell
@@ -94,16 +192,16 @@ export default function RegisterPage() {
         </>
       }
     >
-      <StepDots total={2} current={step} />
+      <StepDots total={3} current={step} />
 
       <AnimatePresence mode="wait">
         <motion.form
           key={step}
-          initial={{ opacity: 0, x: step === 1 ? 32 : -32 }}
+          initial={{ opacity: 0, x: 28 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: step === 1 ? -32 : 32 }}
+          exit={{ opacity: 0, x: -28 }}
           transition={{ duration: 0.28, ease: "easeOut" }}
-          onSubmit={step === 0 ? goNext : onSubmit}
+          onSubmit={step === 0 ? requestOtp : step === 1 ? confirmOtp : onSubmit}
           className="space-y-4"
         >
           <AuthError message={error} />
@@ -168,16 +266,57 @@ export default function RegisterPage() {
                 }
               />
 
-              <Button type="submit" className="w-full py-3">
-                Continue <ArrowRight className="h-4 w-4" />
+              <Button type="submit" isLoading={loading} className="w-full py-3">
+                Send verification code <ArrowRight className="h-4 w-4" />
               </Button>
             </>
           )}
 
           {step === 1 && (
             <>
+              <div className="rounded-xl border border-honey-500/20 bg-honey-500/5 p-4 text-center">
+                <MailCheck className="mx-auto mb-2 h-8 w-8 text-honey-500" />
+                <p className="text-sm text-zinc-600 dark:text-zinc-300">
+                  We sent a 6-digit code to
+                </p>
+                <p className="mt-0.5 text-sm font-semibold">{form.email}</p>
+                {devOtp && (
+                  <p className="mt-3 rounded-lg border border-dashed border-zinc-300 px-3 py-2 font-mono text-xs text-zinc-500 dark:border-zinc-700">
+                    Dev code: <span className="font-bold text-honey-600">{devOtp}</span>
+                  </p>
+                )}
+              </div>
+
+              <OtpBoxes value={otp} onChange={setOtp} />
+
+              <Button type="submit" className="w-full py-3" disabled={otp.replace(/\D/g, "").length !== 6}>
+                Verify email <ShieldCheck className="h-4 w-4" />
+              </Button>
+
+              <div className="flex items-center justify-between text-xs">
+                <button
+                  type="button"
+                  onClick={() => setStep(0)}
+                  className="inline-flex items-center gap-1 text-zinc-500 hover:text-honey-600"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" /> Edit details
+                </button>
+                <button
+                  type="button"
+                  disabled={resendIn > 0 || loading}
+                  onClick={requestOtp}
+                  className="text-honey-600 disabled:opacity-50 dark:text-honey-400"
+                >
+                  {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend code"}
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
               <div className="rounded-xl border border-honey-500/20 bg-honey-500/5 p-3.5 text-xs text-zinc-500 dark:text-zinc-400">
-                These help us personalize budgets and tips. You can change them later in Profile.
+                Email verified ✓ — these settings personalize budgets and tips.
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -225,7 +364,7 @@ export default function RegisterPage() {
               </div>
 
               <div className="flex gap-3 pt-1">
-                <Button type="button" variant="ghost" onClick={() => setStep(0)} className="flex-1">
+                <Button type="button" variant="ghost" onClick={() => setStep(1)} className="flex-1">
                   <ArrowLeft className="h-4 w-4" /> Back
                 </Button>
                 <Button type="submit" isLoading={loading} className="flex-[2] py-3">
@@ -237,5 +376,13 @@ export default function RegisterPage() {
         </motion.form>
       </AnimatePresence>
     </AuthShell>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
   );
 }

@@ -69,6 +69,10 @@ export const useAuthStore = create((set, get) => ({
     return res.data.user;
   },
 
+  async requestOtp(payload) {
+    return api.post("/auth/request-otp", payload);
+  },
+
   async logout() {
     try {
       await api.post("/auth/logout");
