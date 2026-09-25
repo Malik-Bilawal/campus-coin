@@ -9,7 +9,7 @@ import { api } from "@/lib/api";
 import { useUIStore } from "@/store/ui";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { AuthShell, AuthError, AuthSuccess } from "@/components/auth/AuthShell";
+import { AuthShell, AuthError } from "@/components/auth/AuthShell";
 import { PasswordStrength } from "@/components/auth/PasswordStrength";
 
 function ResetForm() {
@@ -98,23 +98,22 @@ function ResetForm() {
         <AuthError message={error} />
 
         {!params.get("token") && (
-          <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-amber-600 dark:text-amber-400">
-            No reset token in the URL — paste the token from your email below.
-          </div>
+          <>
+            <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-amber-600 dark:text-amber-400">
+              No reset token in the URL — paste the token from your email below.
+            </div>
+            <Input
+              label="Reset token"
+              name="token"
+              required
+              placeholder="Paste token from email/link"
+              value={form.token}
+              onChange={(e) => set("token", e.target.value)}
+            />
+          </>
         )}
 
-        {!params.get("token") && (
-          <Input
-            label="Reset token"
-            name="token"
-            required
-            placeholder="Paste token from email/link"
-            value={form.token}
-            onChange={(e) => set("token", e.target.value)}
-          />
-        )}
-
-        <div className="relative">
+        <div>
           <Input
             label="New password"
             name="password"
@@ -125,15 +124,17 @@ function ResetForm() {
             value={form.password}
             onChange={(e) => set("password", e.target.value)}
             autoFocus
+            trailing={
+              <button
+                type="button"
+                onClick={() => setShowPw(!showPw)}
+                aria-label={showPw ? "Hide password" : "Show password"}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+              >
+                {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            }
           />
-          <button
-            type="button"
-            onClick={() => setShowPw(!showPw)}
-            aria-label={showPw ? "Hide password" : "Show password"}
-            className="absolute right-3 top-[34px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
-          >
-            {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
           <PasswordStrength password={form.password} />
         </div>
 
@@ -156,9 +157,9 @@ function ResetForm() {
           <KeyRound className="h-4 w-4" /> Update password
         </Button>
 
-        <AuthSuccess>
+        <p className="rounded-xl border border-zinc-200 bg-zinc-100/70 p-3 text-xs text-zinc-500 dark:border-zinc-700/60 dark:bg-zinc-800/40 dark:text-zinc-400">
           Tip: use a passphrase of 3–4 unrelated words — stronger and easier to remember.
-        </AuthSuccess>
+        </p>
       </form>
     </AuthShell>
   );

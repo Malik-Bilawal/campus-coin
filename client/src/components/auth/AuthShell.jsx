@@ -43,31 +43,22 @@ function FloatingCard({ className, delay = 0, children }) {
   );
 }
 
-export function AuthShell({ children, title, subtitle, footer, showBack = true, maxWidth = "max-w-md" }) {
+export function AuthShell({ children, title, subtitle, footer, showBack = true, wide = false, maxWidth = "max-w-md" }) {
+  const width = wide ? "max-w-lg" : maxWidth;
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       <div className="grid min-h-screen lg:grid-cols-[1.05fr_1fr] xl:grid-cols-2">
         {/* Brand / visual panel */}
         <aside className="relative hidden overflow-hidden bg-zinc-950 text-white lg:flex lg:flex-col lg:justify-between lg:p-10 xl:p-14">
           <div className="pointer-events-none absolute inset-0">
-            <div className="absolute -left-40 -top-32 h-[28rem] w-[28rem] rounded-full bg-honey-500/30 blur-[100px]" />
-            <div className="absolute -right-28 bottom-0 h-96 w-96 rounded-full bg-amber-400/20 blur-3xl" />
-            <div className="absolute left-1/3 top-1/2 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl" />
+            <div className="absolute -left-40 -top-36 h-[30rem] w-[30rem] rounded-full bg-honey-500/20 blur-[110px]" />
             <div
-              className="absolute inset-0 opacity-[0.08]"
+              className="absolute inset-0 opacity-[0.06]"
               style={{
                 backgroundImage:
                   "radial-gradient(rgba(245,158,11,0.9) 1px, transparent 1px)",
                 backgroundSize: "28px 28px",
                 maskImage: "radial-gradient(ellipse at 30% 40%, black, transparent 70%)",
-              }}
-            />
-            <div
-              className="absolute inset-0 opacity-[0.05]"
-              style={{
-                backgroundImage:
-                  "linear-gradient(rgba(245,158,11,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(245,158,11,0.6) 1px, transparent 1px)",
-                backgroundSize: "56px 56px",
               }}
             />
           </div>
@@ -81,13 +72,10 @@ export function AuthShell({ children, title, subtitle, footer, showBack = true, 
               initial={{ opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.45 }}
-              className="mb-6 inline-flex items-center gap-2 rounded-full border border-honey-500/40 bg-honey-500/15 px-4 py-1.5 text-xs font-semibold tracking-wide text-honey-300"
+              className="mb-6 inline-flex items-center gap-2 rounded-full border border-honey-500/30 bg-honey-500/10 px-4 py-1.5 text-xs font-semibold tracking-wide text-honey-300"
             >
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-honey-400 opacity-60" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-honey-400" />
-              </span>
-              NextGen BudgetBee · Verified OTP signup
+              <Sparkles className="h-3.5 w-3.5" />
+              Free forever for students
             </motion.span>
             <motion.h2
               initial={{ opacity: 0, y: 16 }}
@@ -96,9 +84,7 @@ export function AuthShell({ children, title, subtitle, footer, showBack = true, 
               className="text-3xl font-extrabold leading-[1.15] tracking-tight xl:text-[2.6rem]"
             >
               Master campus money, one{" "}
-              <span className="bg-gradient-to-r from-honey-300 via-amber-200 to-honey-400 bg-clip-text text-transparent">
-                smart habit
-              </span>{" "}
+              <span className="text-honey-400">smart habit</span>{" "}
               at a time.
             </motion.h2>
             <motion.p
@@ -169,9 +155,7 @@ export function AuthShell({ children, title, subtitle, footer, showBack = true, 
         {/* Form panel */}
         <main className="relative flex flex-col">
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-honey-500/12 blur-3xl" />
-            <div className="absolute -left-24 bottom-0 h-72 w-72 rounded-full bg-amber-400/10 blur-3xl" />
-            <div className="absolute left-1/2 top-1/3 h-40 w-40 -translate-x-1/2 rounded-full bg-honey-400/5 blur-3xl" />
+            <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-honey-500/10 blur-3xl" />
           </div>
 
           <div className="relative z-10 flex items-center justify-between border-b border-zinc-200/60 px-6 py-5 dark:border-zinc-800/60 lg:hidden">
@@ -186,7 +170,7 @@ export function AuthShell({ children, title, subtitle, footer, showBack = true, 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45 }}
-              className={`w-full ${maxWidth}`}
+              className={`w-full ${width}`}
             >
               {showBack && (
                 <Link
@@ -199,12 +183,6 @@ export function AuthShell({ children, title, subtitle, footer, showBack = true, 
 
               {/* Form top / header */}
               <div className="mb-7">
-                <div className="mb-4 flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-honey-400 to-honey-600 shadow-honey">
-                    <Hexagon className="h-6 w-6 text-zinc-900" fill="currentColor" />
-                  </div>
-                  <div className="h-px flex-1 bg-gradient-to-r from-honey-500/40 via-zinc-200 to-transparent dark:via-zinc-700" />
-                </div>
                 <h1 className="text-[1.7rem] font-extrabold leading-tight tracking-tight sm:text-3xl">
                   {title}
                 </h1>

@@ -5,7 +5,6 @@ import { ApiError } from "../utils/apiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { sendSuccess } from "../utils/response.js";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/token.js";
-import { createUserDefaultCategories } from "../seeds/categories.js";
 import { env } from "../config/env.js";
 
 const REFRESH_COOKIE = "refreshToken";
@@ -73,8 +72,39 @@ export const requestOtp = asyncHandler(async (req, res) => {
   );
 });
 
-export const register = asyncHandler(async (req, res) => {
+export const verifyOtp = asyncHandler(async (req, res) => {
   const { email, otp } = req.body;
+
+  const pending = await PendingRegistration.findOne({
+    email: email.toLowerCase(),
+  }).select("+otpHash");
+
+  if (!pending) {
+    throw ApiError.badRequest("No pending registration. Request a new verification code.");
+  }
+  if (!pending.otpExpires || pending.otpExpires < new Date()) {
+    await PendingRegistration.deleteOne({ _id: pending._id });
+    throw ApiError.badRequest("Verification code expired. Request a new one.");
+  }
+  if (pending.attempts >= 5) {
+    await PendingRegistration.deleteOne({ _id: pending._id });
+    throw ApiError.badRequest("Too many attempts. Start registration again.");
+  }
+  if (!pending.verifyOtp(otp)) {
+    pending.attempts += 1;
+    await pending.save({ validateBeforeSave: false });
+    const left = 5 - pending.attempts;
+    throw ApiError.badRequest(
+      left > 0 ? `Invalid verification code. ${left} attempt(s) left.` : "Too many attempts."
+    );
+  }
+
+  // Dry check only — the pending record and OTP stay valid for the final register call.
+  return sendSuccess(res, null, "Email verified");
+});
+
+export const register = asyncHandler(async (req, res) => {
+  const { email, otp, academicYear, allowanceBaseline, savingsGoal, currency } = req.body;
 
   const pending = await PendingRegistration.findOne({
     email: email.toLowerCase(),
@@ -104,14 +134,15 @@ export const register = asyncHandler(async (req, res) => {
     name: pending.name,
     email: pending.email,
     password: pending.password,
-    academicYear: pending.academicYear,
-    allowanceBaseline: pending.allowanceBaseline,
-    savingsGoal: pending.savingsGoal,
-    currency: pending.currency,
+    // Money-profile fields are collected on the client's last step (after
+    // request-otp), so accept them here and fall back to what request-otp stored.
+    academicYear: academicYear ?? pending.academicYear,
+    allowanceBaseline: allowanceBaseline ?? pending.allowanceBaseline,
+    savingsGoal: savingsGoal ?? pending.savingsGoal,
+    currency: currency ?? pending.currency,
   });
 
   await PendingRegistration.deleteOne({ _id: pending._id });
-  await createUserDefaultCategories(user._id);
 
   const tokens = setAuthCookies(res, user._id, user.role, user.email);
   return sendSuccess(res, { user: user.toSafeJSON(), ...tokens }, "Account created", 201);

@@ -30,46 +30,87 @@ const steps = [
 ];
 
 function OtpBoxes({ value, onChange }) {
-  const digits = value.padEnd(6, " ").slice(0, 6).split("");
+  const refs = useRef([]);
 
-  function handleChange(i, e) {
-    const raw = e.target.value.replace(/\D/g, "");
-    if (!raw) return;
-    const next = value.padEnd(6, " ").split("");
-    for (let k = 0; k < raw.length && i + k < 6; k++) next[i + k] = raw[k];
-    onChange(next.join("").replace(/\s/g, "").slice(0, 6));
-    const boxes = document.querySelectorAll<HTMLInputElement>("[data-otp-box]");
-    boxes[Math.min(i + raw.length, 5)]?.focus();
+  useEffect(() => {
+    refs.current[0]?.focus();
+  }, []);
+
+  function moveTo(i) {
+    refs.current[Math.max(0, Math.min(i, 5))]?.focus();
   }
 
-  function handleKeyDown(i, e) {
-    if (e.key === "Backspace") {
+  // Digits always fill contiguously (no holes), so the string form stays valid.
+  function place(i, digits) {
+    const start = Math.min(i, value.length);
+    const arr = value.split("");
+    while (arr.length < 6) arr.push("");
+    for (let k = 0; k < digits.length && start + k < 6; k++) arr[start + k] = digits[k];
+    onChange(arr.join("").slice(0, 6));
+    return Math.min(start + digits.length, 6);
+  }
+
+  function onKeyDown(i, e) {
+    if (e.key >= "0" && e.key <= "9") {
       e.preventDefault();
-      const boxes = document.querySelectorAll<HTMLInputElement>("[data-otp-box]");
-      const next = value.padEnd(6, " ").split("");
-      if (next[i] && next[i] !== " ") {
-        next[i] = " ";
-        onChange(next.join("").replace(/\s/g, ""));
+      moveTo(place(i, e.key));
+    } else if (e.key === "Backspace") {
+      e.preventDefault();
+      if (value[i]) {
+        onChange(value.slice(0, i));
+        moveTo(i);
       } else if (i > 0) {
-        next[i - 1] = " ";
-        onChange(next.join("").replace(/\s/g, ""));
-        boxes[i - 1]?.focus();
+        onChange(value.slice(0, i - 1));
+        moveTo(i - 1);
       }
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      moveTo(i - 1);
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      moveTo(i + 1);
     }
+  }
+
+  function onPaste(i, e) {
+    e.preventDefault();
+    const raw = (e.clipboardData?.getData("text") || "").replace(/\D/g, "").slice(0, 6);
+    if (raw) moveTo(place(i, raw));
+  }
+
+  // Catches browser/keyboard autofill (bypasses keydown).
+  function onInput(i, e) {
+    const raw = e.target.value.replace(/\D/g, "");
+    if (raw.length > 1) {
+      onChange(raw.slice(0, 6));
+      moveTo(Math.min(raw.length, 5));
+    } else if (raw.length === 1) {
+      moveTo(place(i, raw));
+    }
+  }
+
+  function onFocus(i, e) {
+    if (i > value.length) {
+      moveTo(value.length);
+      return;
+    }
+    e.target.select();
   }
 
   return (
     <div className="flex justify-center gap-2 sm:gap-3">
-      {digits.map((d, i) => (
+      {Array.from({ length: 6 }).map((_, i) => (
         <input
           key={i}
-          data-otp-box
+          ref={(el) => (refs.current[i] = el)}
           inputMode="numeric"
+          autoComplete={i === 0 ? "one-time-code" : "off"}
           maxLength={1}
-          value={d === " " ? "" : d}
-          onChange={(e) => handleChange(i, e)}
-          onKeyDown={(e) => handleKeyDown(i, e)}
-          onFocus={(e) => e.target.select()}
+          value={value[i] || ""}
+          onKeyDown={(e) => onKeyDown(i, e)}
+          onPaste={(e) => onPaste(i, e)}
+          onInput={(e) => onInput(i, e)}
+          onFocus={(e) => onFocus(i, e)}
           className="h-12 w-10 rounded-xl border border-zinc-200 bg-white text-center text-lg font-bold tabular-nums text-zinc-900 outline-none transition focus:border-honey-500 focus:ring-2 focus:ring-honey-500/20 dark:border-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-100 sm:h-14 sm:w-12"
           aria-label={`OTP digit ${i + 1}`}
         />
@@ -152,8 +193,17 @@ function RegisterForm() {
   async function confirmOtp(e) {
     e.preventDefault();
     setError("");
-    if (otp.replace(/\D/g, "").length !== 6) return setError("Enter the 6-digit code");
-    setStep(2);
+    const code = otp.replace(/\D/g, "");
+    if (code.length !== 6) return setError("Enter the 6-digit code");
+    setLoading(true);
+    try {
+      await api.post("/auth/verify-otp", { email: form.email.trim(), otp: code });
+      setStep(2);
+    } catch (err) {
+      setError(err.message || "Invalid verification code");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function onSubmit(e) {
@@ -161,7 +211,14 @@ function RegisterForm() {
     setError("");
     setLoading(true);
     try {
-      await register({ email: form.email.trim(), otp: otp.replace(/\D/g, "") });
+      await register({
+        email: form.email.trim(),
+        otp: otp.replace(/\D/g, ""),
+        academicYear: form.academicYear.trim(),
+        allowanceBaseline: Number(form.allowanceBaseline) || 0,
+        savingsGoal: Number(form.savingsGoal) || 0,
+        currency: form.currency,
+      });
       celebrate({ particleCount: 80, origin: { y: 0.6 } });
       addToast({ type: "success", message: "Account created — welcome to Campus Coin!" });
       router.push("/dashboard");
@@ -229,7 +286,7 @@ function RegisterForm() {
                 />
               </div>
 
-              <div className="relative">
+              <div>
                 <Input
                   label="Password"
                   name="password"
@@ -239,15 +296,17 @@ function RegisterForm() {
                   placeholder="Create a password"
                   value={form.password}
                   onChange={(e) => set("password", e.target.value)}
+                  trailing={
+                    <button
+                      type="button"
+                      onClick={() => setShowPw(!showPw)}
+                      aria-label={showPw ? "Hide password" : "Show password"}
+                      className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                    >
+                      {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  }
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(!showPw)}
-                  aria-label={showPw ? "Hide password" : "Show password"}
-                  className="absolute right-3 top-[34px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
-                >
-                  {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
                 <PasswordStrength password={form.password} />
               </div>
 
@@ -289,7 +348,7 @@ function RegisterForm() {
 
               <OtpBoxes value={otp} onChange={setOtp} />
 
-              <Button type="submit" className="w-full py-3" disabled={otp.replace(/\D/g, "").length !== 6}>
+              <Button type="submit" isLoading={loading} className="w-full py-3" disabled={otp.replace(/\D/g, "").length !== 6}>
                 Verify email <ShieldCheck className="h-4 w-4" />
               </Button>
 

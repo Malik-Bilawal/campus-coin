@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect } from "react";
+import { MotionConfig } from "framer-motion";
 import { useUIStore } from "@/store/ui";
 import { useAuthStore } from "@/store/auth";
 
@@ -21,7 +22,11 @@ export function Providers({ children }) {
     init();
   }, [init]);
 
-  return <AppContext.Provider value={{ theme, fontSize, setTheme, setFontSize }}>{children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider value={{ theme, fontSize, setTheme, setFontSize }}>
+      <MotionConfig reducedMotion="user">{children}</MotionConfig>
+    </AppContext.Provider>
+  );
 }
 
 export function useApp() {

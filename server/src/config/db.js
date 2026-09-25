@@ -48,9 +48,18 @@ export async function connectDB() {
         { uri: env.MONGODB_URI, t: atlasTimeout, label: "Atlas" },
       ];
 
-  for (const target of order) {
-    if (!target.uri) continue;
-    if (await tryConnect(target.uri, target.t, target.label)) return;
+  // Atlas links can be flaky on some networks — retry before falling back
+  // to the ephemeral in-memory DB (which silently loses all data).
+  const MAX_ROUNDS = 3;
+  for (let round = 1; round <= MAX_ROUNDS; round++) {
+    for (const target of order) {
+      if (!target.uri) continue;
+      if (await tryConnect(target.uri, target.t, target.label)) return;
+    }
+    if (round < MAX_ROUNDS) {
+      console.warn(`⚠️  DB round ${round}/${MAX_ROUNDS} failed; retrying in 5s...`);
+      await new Promise((r) => setTimeout(r, 5000));
+    }
   }
 
   if (env.NODE_ENV === "production" && env.FORCE_ATLAS === "true") {

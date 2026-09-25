@@ -19,7 +19,7 @@ export const getDashboard = asyncHandler(async (req, res) => {
   const [summary, topCategory, recentTx, pinnedTips, unreadNotifs, budgetRows] = await Promise.all([
     Transaction.aggregate([
       { $match: { userId, date: { $gte: start, $lt: end } } },
-      {S
+      {
         $group: {
           _id: "$type",
           total: { $sum: "$amount" },

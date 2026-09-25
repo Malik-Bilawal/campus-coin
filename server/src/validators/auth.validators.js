@@ -10,10 +10,20 @@ export const requestOtpSchema = z.object({
   currency: z.string().max(3).optional().default("BDT"),
 });
 
-export const registerSchema = z.object({
+export const otpVerifySchema = z.object({
   email: z.string().email(),
   otp: z.string().length(6),
 });
+
+export const registerSchema = z
+  .object({
+    email: z.string().email(),
+    otp: z.string().length(6),
+    academicYear: z.string().max(40).optional(),
+    allowanceBaseline: z.coerce.number().min(0).optional(),
+    savingsGoal: z.coerce.number().min(0).optional(),
+    currency: z.string().max(3).optional(),
+  });
 
 export const loginSchema = z.object({
   email: z.string().email(),

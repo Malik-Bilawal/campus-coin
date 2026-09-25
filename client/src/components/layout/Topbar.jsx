@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -28,6 +28,34 @@ export function Topbar({ live }) {
   const [showNotifs, setShowNotifs] = useState(false);
   const [showUser, setShowUser] = useState(false);
   const [showFont, setShowFont] = useState(false);
+
+  const fontRef = useRef(null);
+  const notifRef = useRef(null);
+  const userRef = useRef(null);
+
+  useEffect(() => {
+    if (!showFont && !showNotifs && !showUser) return;
+    function closeAll() {
+      setShowFont(false);
+      setShowNotifs(false);
+      setShowUser(false);
+    }
+    function onMouseDown(e) {
+      if (showFont && fontRef.current && !fontRef.current.contains(e.target)) setShowFont(false);
+      if (showNotifs && notifRef.current && !notifRef.current.contains(e.target))
+        setShowNotifs(false);
+      if (showUser && userRef.current && !userRef.current.contains(e.target)) setShowUser(false);
+    }
+    function onKeyDown(e) {
+      if (e.key === "Escape") closeAll();
+    }
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [showFont, showNotifs, showUser]);
 
   useEffect(() => {
     loadNotifs();
@@ -74,7 +102,7 @@ export function Topbar({ live }) {
         />
 
         {/* Font size */}
-        <div className="relative">
+        <div ref={fontRef} className="relative">
           <button
             onClick={() => {
               setShowFont(!showFont);
@@ -127,7 +155,7 @@ export function Topbar({ live }) {
         </motion.button>
 
         {/* Notifications */}
-        <div className="relative">
+        <div ref={notifRef} className="relative">
           <button
             onClick={() => {
               setShowNotifs(!showNotifs);
@@ -197,7 +225,7 @@ export function Topbar({ live }) {
         </div>
 
         {/* User */}
-        <div className="relative">
+        <div ref={userRef} className="relative">
           <button
             onClick={() => {
               setShowUser(!showUser);

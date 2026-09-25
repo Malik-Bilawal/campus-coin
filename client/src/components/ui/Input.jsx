@@ -4,7 +4,7 @@ import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
 export const Input = forwardRef(function Input(
-  { label, error, hint, className, id, ...props },
+  { label, error, hint, className, id, trailing, ...props },
   ref
 ) {
   const inputId = id || props.name;
@@ -18,12 +18,22 @@ export const Input = forwardRef(function Input(
           {label}
         </label>
       )}
-      <input
-        ref={ref}
-        id={inputId}
-        className={cn("input-field", error && "border-rose-500 focus:border-rose-500 focus:ring-rose-500/20", className)}
-        {...props}
-      />
+      <div className="relative">
+        <input
+          ref={ref}
+          id={inputId}
+          className={cn(
+            "input-field",
+            trailing && "pr-11",
+            error && "border-rose-500 focus:border-rose-500 focus:ring-rose-500/20",
+            className
+          )}
+          {...props}
+        />
+        {trailing && (
+          <span className="absolute inset-y-0 right-3 flex items-center">{trailing}</span>
+        )}
+      </div>
       {error && <p className="mt-1 text-xs text-rose-500">{error}</p>}
       {!error && hint && <p className="mt-1 text-xs text-zinc-400">{hint}</p>}
     </div>

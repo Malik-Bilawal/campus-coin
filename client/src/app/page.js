@@ -8,7 +8,6 @@ import {
   Sparkles,
   BarChart3,
   Wallet,
-  Shield,
   Bot,
   Bell,
   Target,
@@ -17,9 +16,7 @@ import {
   Moon,
   Quote,
   CheckCircle2,
-  TrendingUp,
   Users,
-  Zap,
 } from "lucide-react";
 
 const features = [
@@ -83,13 +80,6 @@ const steps = [
   },
 ];
 
-const stats = [
-  { value: "8+", label: "Core modules", icon: Zap },
-  { value: "20+", label: "API endpoints", icon: TrendingUp },
-  { value: "3", label: "AI providers", icon: Bot },
-  { value: "100%", label: "Client-side fallback", icon: Shield },
-];
-
 const sitemap = [
   { label: "Auth", children: ["Login", "Register", "Forgot / Reset"] },
   { label: "Dashboard", children: ["Overview", "Balance", "Streak", "Live dot"] },
@@ -149,7 +139,7 @@ function MockDashboard() {
   return (
     <div className="relative mx-auto w-full max-w-lg">
       {/* glow */}
-      <div className="absolute -inset-6 rounded-3xl bg-honey-500/20 blur-3xl" aria-hidden />
+      <div className="absolute -inset-4 rounded-3xl bg-honey-500/10 blur-3xl" aria-hidden />
 
       <motion.div
         initial={{ opacity: 0, y: 40, rotateX: 12 }}
@@ -232,7 +222,7 @@ function MockDashboard() {
           <Trophy className="h-3.5 w-3.5 text-amber-400" />
           <div>
             <p className="text-[9px] text-zinc-400">Streak</p>
-            <p className="text-[11px] font-medium text-white">14 days 🔥</p>
+            <p className="text-[11px] font-medium text-white">14 days and counting</p>
           </div>
         </div>
       </motion.div>
@@ -263,10 +253,10 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-3">
             <Link href="/login" className="btn-ghost text-sm">
-              Login
+              Sign in
             </Link>
             <Link href="/register" className="btn-honey text-sm">
-              Get Started <ArrowRight className="h-4 w-4" />
+              Get started <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
@@ -275,9 +265,7 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-40 left-1/4 h-[28rem] w-[28rem] rounded-full bg-honey-500/25 blur-[100px]" />
-          <div className="absolute right-1/5 top-40 h-80 w-80 rounded-full bg-amber-400/18 blur-3xl" />
-          <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-emerald-500/8 blur-3xl" />
+          <div className="absolute -right-32 -top-32 h-[30rem] w-[30rem] rounded-full bg-honey-500/12 blur-[110px]" />
           <div
             className="absolute inset-0 opacity-[0.05] dark:opacity-[0.07]"
             style={{
@@ -285,9 +273,6 @@ export default function LandingPage() {
               backgroundSize: "32px 32px",
               maskImage: "radial-gradient(ellipse at center, black 20%, transparent 70%)",
             }}
-          />
-          <div
-            className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-zinc-50 to-transparent dark:from-zinc-950"
           />
         </div>
 
@@ -299,11 +284,8 @@ export default function LandingPage() {
               transition={{ duration: 0.45 }}
               className="mb-6 inline-flex items-center gap-2 rounded-full border border-honey-500/35 bg-honey-500/12 px-4 py-1.5 text-xs font-semibold tracking-wide text-honey-700 dark:text-honey-300"
             >
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-honey-400 opacity-60" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-honey-400" />
-              </span>
-              NextGen BudgetBee · OTP-verified signup
+              <Sparkles className="h-3.5 w-3.5" />
+              New · AI money coach built in
             </motion.span>
 
             <motion.h1
@@ -313,9 +295,7 @@ export default function LandingPage() {
               className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-[3.5rem] lg:leading-[1.06]"
             >
               Take control of your{" "}
-              <span className="bg-gradient-to-r from-honey-500 via-amber-400 to-honey-300 bg-clip-text text-transparent">
-                student money
-              </span>
+              <span className="text-honey-600 dark:text-honey-400">student money</span>
             </motion.h1>
 
             <motion.p
@@ -324,9 +304,8 @@ export default function LandingPage() {
               transition={{ delay: 0.16, duration: 0.55 }}
               className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-zinc-500 sm:text-base lg:mx-0 dark:text-zinc-400"
             >
-              Log expenses, set budgets, and get plain-language saving tips — built for hostel
-              life, canteen runs, and scholarship season. Powered by AI with full offline rules
-              fallback.
+              Log expenses in seconds, set per-category budgets, and get plain-language saving
+              tips — built for hostel life, canteen runs, and scholarship season.
             </motion.p>
 
             <motion.div
@@ -353,33 +332,15 @@ export default function LandingPage() {
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Free forever for students
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Email OTP verification
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Setup takes under a minute
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Dark mode default
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Works on any device
               </span>
             </motion.div>
           </div>
 
           <MockDashboard />
-        </div>
-      </section>
-
-      {/* Stats strip */}
-      <section className="border-y border-zinc-200 bg-white/60 dark:border-zinc-800 dark:bg-zinc-900/40">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-6 py-10 sm:grid-cols-4">
-          {stats.map((s, i) => (
-            <motion.div
-              key={s.label}
-              {...fadeUp}
-              transition={{ ...fadeUp.transition, delay: i * 0.06 }}
-              className="text-center"
-            >
-              <s.icon className="mx-auto mb-2 h-4 w-4 text-honey-500" />
-              <p className="text-2xl font-extrabold tracking-tight sm:text-3xl">{s.value}</p>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{s.label}</p>
-            </motion.div>
-          ))}
         </div>
       </section>
 
@@ -391,7 +352,7 @@ export default function LandingPage() {
           </p>
           <h2 className="text-3xl font-bold tracking-tight">Everything a student budget needs</h2>
           <p className="mx-auto mt-3 max-w-xl text-sm text-zinc-500 dark:text-zinc-400">
-            Full CRUD, real-time alerts, AI assist, and admin tooling — not a toy demo.
+            Full CRUD, real-time alerts, AI assist, and admin tooling — all in one clean workspace.
           </p>
         </motion.div>
 
@@ -464,7 +425,7 @@ export default function LandingPage() {
             </h2>
             <p className="mt-4 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
               Groq primary with OpenRouter fallback — and every feature degrades to smart local
-              rules if providers are down. Judges can flip the switch and still see value.
+              rules, so the coach keeps working even when an AI provider is down.
             </p>
             <ul className="mt-6 space-y-3">
               {[
@@ -518,9 +479,9 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-6">
           <motion.div {...fadeUp} className="mb-10 text-center">
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-honey-600 dark:text-honey-400">
-              Loved by students
+              Testimonials
             </p>
-            <h2 className="text-3xl font-bold tracking-tight">Real campus voices</h2>
+            <h2 className="text-3xl font-bold tracking-tight">Why students stick with it</h2>
           </motion.div>
           <div className="grid gap-4 md:grid-cols-3">
             {testimonials.map((t, i) => (
@@ -548,10 +509,10 @@ export default function LandingPage() {
       <section id="sitemap" className="mx-auto max-w-6xl scroll-mt-20 px-6 py-20">
         <motion.div {...fadeUp} className="mb-8 text-center">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-honey-600 dark:text-honey-400">
-            Information architecture
+            Product tour
           </p>
           <h2 className="text-3xl font-bold tracking-tight">Explore the app</h2>
-          <p className="mt-2 text-sm text-zinc-500">Visual sitemap of every section</p>
+          <p className="mt-2 text-sm text-zinc-500">Visual sitemap of every screen</p>
         </motion.div>
 
         <motion.div {...fadeUp} className="glass-card relative overflow-hidden p-6 sm:p-8">
@@ -603,13 +564,11 @@ export default function LandingPage() {
         </div>
         <div className="relative mx-auto max-w-3xl px-6 py-20 text-center">
           <motion.div {...fadeUp}>
-            <Shield className="mx-auto mb-4 h-8 w-8 text-honey-500" />
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Ready to boss your budget?
+              Ready when you are
             </h2>
             <p className="mx-auto mt-4 max-w-md text-sm text-zinc-500 dark:text-zinc-400">
-              Join Campus Coin free — set up takes under a minute. Demo accounts available for
-              judges.
+              Free for students — create an account in under a minute, or explore the demo first.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link href="/register" className="btn-honey px-7 py-3 text-base">
@@ -627,7 +586,7 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 sm:flex-row">
           <Logo />
           <p className="text-center text-xs text-zinc-400">
-            Campus Coin · NextGen BudgetBee · Built for campus financial literacy
+            © {new Date().getFullYear()} Campus Coin · Built for campus financial literacy
           </p>
         </div>
       </footer>

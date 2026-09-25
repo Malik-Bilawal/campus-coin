@@ -4,7 +4,7 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, ArrowRight, Zap } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, GraduationCap, Shield } from "lucide-react";
 import { useAuthStore } from "@/store/auth";
 import { useUIStore } from "@/store/ui";
 import { Input } from "@/components/ui/Input";
@@ -78,26 +78,26 @@ function LoginForm() {
           onChange={(e) => setForm({ ...form, email: e.target.value })}
         />
 
-        <div className="relative">
-          <Input
-            label="Password"
-            name="password"
-            type={showPw ? "text" : "password"}
-            autoComplete="current-password"
-            required
-            placeholder="••••••••"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPw(!showPw)}
-            aria-label={showPw ? "Hide password" : "Show password"}
-            className="absolute right-3 top-[34px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
-          >
-            {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        </div>
+        <Input
+          label="Password"
+          name="password"
+          type={showPw ? "text" : "password"}
+          autoComplete="current-password"
+          required
+          placeholder="••••••••"
+          value={form.password}
+          onChange={(e) => setForm({ ...form, password: e.target.value })}
+          trailing={
+            <button
+              type="button"
+              onClick={() => setShowPw(!showPw)}
+              aria-label={showPw ? "Hide password" : "Show password"}
+              className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+            >
+              {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          }
+        />
 
         <div className="flex items-center justify-end text-xs">
           <Link
@@ -114,8 +114,11 @@ function LoginForm() {
       </form>
 
       <div className="mt-6 border-t border-zinc-200 pt-5 dark:border-zinc-700/60">
-        <div className="mb-2.5 flex items-center justify-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-400">
-          <Zap className="h-3 w-3 text-honey-500" /> Quick demo access
+        <div className="mb-2.5 flex items-center justify-between">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+            Demo accounts
+          </p>
+          <p className="text-[11px] text-zinc-400">one click to explore</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
           {DEMOS.map((d) => (
@@ -124,9 +127,16 @@ function LoginForm() {
               type="button"
               whileTap={{ scale: 0.97 }}
               onClick={() => fillDemo(d)}
-              className="rounded-lg border border-dashed border-zinc-300 px-2 py-2.5 text-[11px] font-medium text-zinc-500 transition hover:border-honey-500/50 hover:bg-honey-500/5 hover:text-honey-600 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-honey-400"
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-left transition hover:border-honey-500/50 hover:bg-honey-500/5 dark:border-zinc-700/60 dark:bg-zinc-800/40 dark:hover:border-honey-500/40"
             >
-              {d.label}
+              <span className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">
+                {d.label === "Admin demo" ? (
+                  <Shield className="h-3 w-3 text-rose-500" />
+                ) : (
+                  <GraduationCap className="h-3 w-3 text-honey-500" />
+                )}
+                {d.label}
+              </span>
               <span className="mt-0.5 block truncate font-mono text-[9px] text-zinc-400 dark:text-zinc-500">
                 {d.email}
               </span>
