@@ -56,7 +56,7 @@ export default function DashboardLayout({ children }) {
     );
   }
 
-  const padClass = sidebarOpen ? "lg:pl-[260px]" : "lg:pl-[76px]";
+  const padClass = sidebarOpen ? "lg:pl-[16.25rem]" : "lg:pl-[5.5rem]";
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">

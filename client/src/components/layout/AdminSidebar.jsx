@@ -61,7 +61,7 @@ export function AdminSidebar() {
 
       <motion.aside
         initial={false}
-        animate={{ width: sidebarOpen ? 260 : 76 }}
+        animate={{ width: sidebarOpen ? "16.25rem" : "5.5rem" }}
         transition={{ type: "spring", stiffness: 280, damping: 30 }}
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-rose-500/15 bg-white/90 backdrop-blur-xl dark:bg-zinc-950/90",
