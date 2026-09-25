@@ -124,7 +124,7 @@ function Logo() {
         <Hexagon className="h-9 w-9 fill-honey-500/20 text-honey-500" />
         <span className="absolute text-sm font-bold text-honey-600 dark:text-honey-400">₵</span>
       </div>
-      <div className="leading-tight">
+      <div className="leading-tight hidden min-[440px]:block">
         <p className="text-sm font-bold">Campus Coin</p>
         <p className="text-[10px] uppercase tracking-[0.18em] text-honey-600 dark:text-honey-400">
           BudgetBee
@@ -251,11 +251,11 @@ export default function LandingPage() {
               Sitemap
             </a>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/login" className="btn-ghost text-sm">
+          <div className="flex shrink-0 items-center gap-3">
+            <Link href="/login" className="btn-ghost whitespace-nowrap text-sm">
               Sign in
             </Link>
-            <Link href="/register" className="btn-honey text-sm">
+            <Link href="/register" className="btn-honey whitespace-nowrap text-sm">
               Get started <ArrowRight className="h-4 w-4" />
             </Link>
           </div>

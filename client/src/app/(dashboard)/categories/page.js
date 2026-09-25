@@ -194,6 +194,7 @@ export default function CategoriesPage() {
         <form onSubmit={onSubmit} className="space-y-4">
           <Input
             label="Name"
+            name="name"
             required
             maxLength={50}
             placeholder="e.g. Coffee"
@@ -202,6 +203,7 @@ export default function CategoriesPage() {
           />
           <Select
             label="Type"
+            name="type"
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
           >

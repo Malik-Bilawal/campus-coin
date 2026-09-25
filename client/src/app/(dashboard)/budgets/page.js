@@ -223,6 +223,7 @@ export default function BudgetsPage() {
         <form onSubmit={onSubmit} className="space-y-4">
           <Select
             label="Expense category"
+            name="categoryId"
             required
             value={form.categoryId}
             onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
@@ -236,6 +237,7 @@ export default function BudgetsPage() {
           </Select>
           <Input
             label={`Monthly limit (${currency})`}
+            name="limit"
             type="number"
             min="0"
             step="0.01"

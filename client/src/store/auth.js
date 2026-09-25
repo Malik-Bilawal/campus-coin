@@ -11,6 +11,10 @@ export const useAuthStore = create((set, get) => ({
 
   async init() {
     if (get().initialized) return;
+    // Claim synchronously so concurrent calls (StrictMode double-effect,
+    // layout + providers racing) don't kick off two /auth/me fetches whose
+    // late second `set({user})` replaces the user ref mid-interaction.
+    set({ initialized: true });
     const stored =
       typeof window !== "undefined" ? sessionStorage.getItem("accessToken") : null;
     try {

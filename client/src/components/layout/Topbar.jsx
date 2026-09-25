@@ -181,7 +181,7 @@ export function Topbar({ live }) {
                 initial={{ opacity: 0, y: 6, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 6, scale: 0.97 }}
-                className="glass-card absolute right-0 top-full mt-2 max-h-96 w-80 overflow-y-auto p-2 dark:bg-zinc-900"
+                className="glass-card absolute right-0 top-full mt-2 max-h-96 w-80 max-w-[calc(100vw_-_6.5rem)] overflow-y-auto p-2 dark:bg-zinc-900"
               >
                 <div className="flex items-center justify-between px-2 py-1.5">
                   <p className="text-sm font-semibold">Notifications</p>

@@ -137,6 +137,7 @@ export default function EditTransactionPage({ params }) {
 
           <Input
             label="Amount"
+            name="amount"
             type="number"
             step="0.01"
             min="0.01"
@@ -147,6 +148,7 @@ export default function EditTransactionPage({ params }) {
 
           <Select
             label="Category"
+            name="categoryId"
             required
             value={form.categoryId}
             onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
@@ -161,6 +163,7 @@ export default function EditTransactionPage({ params }) {
 
           <Input
             label="Date"
+            name="date"
             type="date"
             required
             value={form.date}
@@ -169,6 +172,7 @@ export default function EditTransactionPage({ params }) {
 
           <Textarea
             label="Note"
+            name="note"
             maxLength={200}
             value={form.note}
             onChange={(e) => setForm({ ...form, note: e.target.value })}

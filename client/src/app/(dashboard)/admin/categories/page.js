@@ -155,12 +155,14 @@ export default function AdminCategoriesPage() {
         <form onSubmit={onSubmit} className="space-y-4">
           <Input
             label="Name"
+            name="name"
             required
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
           />
           <Select
             label="Type"
+            name="type"
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
           >

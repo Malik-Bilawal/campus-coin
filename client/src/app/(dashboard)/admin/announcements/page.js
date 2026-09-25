@@ -174,6 +174,7 @@ export default function AdminAnnouncementsPage() {
         <form onSubmit={onSubmit} className="space-y-4">
           <Input
             label="Title"
+            name="title"
             required
             maxLength={120}
             value={form.title}
@@ -181,6 +182,7 @@ export default function AdminAnnouncementsPage() {
           />
           <Textarea
             label="Body"
+            name="body"
             required
             maxLength={500}
             value={form.body}

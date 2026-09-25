@@ -198,6 +198,7 @@ export default function AdminUsersPage() {
         <form onSubmit={resetPassword} className="space-y-4">
           <Input
             label="New password"
+            name="password"
             value={newPw}
             onChange={(e) => setNewPw(e.target.value)}
             required

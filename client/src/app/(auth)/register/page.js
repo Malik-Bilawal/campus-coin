@@ -31,6 +31,10 @@ const steps = [
 
 function OtpBoxes({ value, onChange }) {
   const refs = useRef([]);
+  // Live mirror of the value: handlers run before React flushes the re-render,
+  // so onFocus must see the just-typed digit or it bounces focus back a box.
+  const valueRef = useRef(value);
+  valueRef.current = value;
 
   useEffect(() => {
     refs.current[0]?.focus();
@@ -42,12 +46,20 @@ function OtpBoxes({ value, onChange }) {
 
   // Digits always fill contiguously (no holes), so the string form stays valid.
   function place(i, digits) {
-    const start = Math.min(i, value.length);
-    const arr = value.split("");
+    const current = valueRef.current;
+    const start = Math.min(i, current.length);
+    const arr = current.split("");
     while (arr.length < 6) arr.push("");
     for (let k = 0; k < digits.length && start + k < 6; k++) arr[start + k] = digits[k];
-    onChange(arr.join("").slice(0, 6));
+    const next = arr.join("").slice(0, 6);
+    valueRef.current = next;
+    onChange(next);
     return Math.min(start + digits.length, 6);
+  }
+
+  function commit(next) {
+    valueRef.current = next;
+    onChange(next);
   }
 
   function onKeyDown(i, e) {
@@ -56,11 +68,12 @@ function OtpBoxes({ value, onChange }) {
       moveTo(place(i, e.key));
     } else if (e.key === "Backspace") {
       e.preventDefault();
-      if (value[i]) {
-        onChange(value.slice(0, i));
+      const current = valueRef.current;
+      if (current[i]) {
+        commit(current.slice(0, i));
         moveTo(i);
       } else if (i > 0) {
-        onChange(value.slice(0, i - 1));
+        commit(current.slice(0, i - 1));
         moveTo(i - 1);
       }
     } else if (e.key === "ArrowLeft") {
@@ -82,7 +95,9 @@ function OtpBoxes({ value, onChange }) {
   function onInput(i, e) {
     const raw = e.target.value.replace(/\D/g, "");
     if (raw.length > 1) {
-      onChange(raw.slice(0, 6));
+      const next = raw.slice(0, 6);
+      valueRef.current = next;
+      onChange(next);
       moveTo(Math.min(raw.length, 5));
     } else if (raw.length === 1) {
       moveTo(place(i, raw));
@@ -90,8 +105,8 @@ function OtpBoxes({ value, onChange }) {
   }
 
   function onFocus(i, e) {
-    if (i > value.length) {
-      moveTo(value.length);
+    if (i > valueRef.current.length) {
+      moveTo(valueRef.current.length);
       return;
     }
     e.target.select();

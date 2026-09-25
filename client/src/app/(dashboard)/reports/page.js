@@ -391,18 +391,21 @@ export default function ReportsPage() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <Input
                 label="From"
+                name="filterFrom"
                 type="date"
                 value={filters.from}
                 onChange={(e) => setFilters({ ...filters, from: e.target.value })}
               />
               <Input
                 label="To"
+                name="filterTo"
                 type="date"
                 value={filters.to}
                 onChange={(e) => setFilters({ ...filters, to: e.target.value })}
               />
               <Select
                 label="Type"
+                name="filterType"
                 value={filters.type}
                 onChange={(e) => setFilters({ ...filters, type: e.target.value })}
               >
@@ -412,6 +415,7 @@ export default function ReportsPage() {
               </Select>
               <Select
                 label="Category"
+                name="filterCategory"
                 value={filters.categoryId}
                 onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}
               >
@@ -540,6 +544,7 @@ export default function ReportsPage() {
           </p>
           <Input
             label="Recipient email"
+            name="recipientEmail"
             type="email"
             placeholder="friend@university.edu"
             value={shareEmail}

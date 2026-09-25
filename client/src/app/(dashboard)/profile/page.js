@@ -131,6 +131,7 @@ export default function ProfilePage() {
         <form onSubmit={saveProfile} className="space-y-4">
           <Input
             label="Full name"
+            name="name"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             required
@@ -138,12 +139,14 @@ export default function ProfilePage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label="Academic year"
+              name="academicYear"
               value={form.academicYear}
               onChange={(e) => setForm({ ...form, academicYear: e.target.value })}
               placeholder="e.g. 3rd Year"
             />
             <Select
               label="Currency"
+              name="currency"
               value={form.currency}
               onChange={(e) => setForm({ ...form, currency: e.target.value })}
             >
@@ -157,6 +160,7 @@ export default function ProfilePage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label="Monthly allowance"
+              name="allowanceBaseline"
               type="number"
               min="0"
               value={form.allowanceBaseline}
@@ -164,6 +168,7 @@ export default function ProfilePage() {
             />
             <Input
               label="Savings goal"
+              name="savingsGoal"
               type="number"
               min="0"
               value={form.savingsGoal}
@@ -181,6 +186,7 @@ export default function ProfilePage() {
         <form onSubmit={savePassword} className="space-y-4">
           <Input
             label="Current password"
+            name="currentPassword"
             type="password"
             required
             value={pw.currentPassword}
@@ -189,6 +195,7 @@ export default function ProfilePage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label="New password"
+              name="newPassword"
               type="password"
               required
               minLength={6}
@@ -197,6 +204,7 @@ export default function ProfilePage() {
             />
             <Input
               label="Confirm new"
+              name="confirmPassword"
               type="password"
               required
               value={pw.confirm}
