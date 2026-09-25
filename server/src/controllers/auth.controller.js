@@ -226,7 +226,8 @@ export const forgotPassword = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email: email.toLowerCase() });
 
   const message = "If that email exists, a reset link has been generated";
-  if (!user) return sendSuccess(res, null, message);
+  const dev = env.NODE_ENV === "development";
+  if (!user) return sendSuccess(res, dev ? { devAccountExists: false } : null, message);
 
   const rawToken = crypto.randomBytes(32).toString("hex");
   user.resetToken = crypto.createHash("sha256").update(rawToken).digest("hex");
@@ -235,11 +236,9 @@ export const forgotPassword = asyncHandler(async (req, res) => {
 
   const resetUrl = `${env.CLIENT_URL}/reset-password?token=${rawToken}`;
 
-  if (env.NODE_ENV === "development") {
-    console.log(`[RESET LINK] ${resetUrl}`);
-  }
+  if (dev) console.log(`[RESET LINK] ${resetUrl}`);
 
-  return sendSuccess(res, { devResetUrl: env.NODE_ENV === "development" ? resetUrl : undefined }, message);
+  return sendSuccess(res, dev ? { devAccountExists: true, devResetUrl: resetUrl } : null, message);
 });
 
 export const resetPassword = asyncHandler(async (req, res) => {

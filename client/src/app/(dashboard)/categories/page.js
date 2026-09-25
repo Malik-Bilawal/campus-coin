@@ -22,6 +22,8 @@ export default function CategoriesPage() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [owner, setOwner] = useState("all");
+  const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -86,7 +88,14 @@ export default function CategoriesPage() {
     }
   }
 
-  const filtered = categories.filter((c) => filter === "all" || c.type === filter);
+  const filtersActive = filter !== "all" || owner !== "all" || q.trim() !== "";
+  const filtered = categories.filter((c) => {
+    const typeOk = filter === "all" || c.type === filter;
+    const ownerOk = owner === "all" || (owner === "mine" ? c.userId !== null : c.userId === null);
+    const query = q.trim().toLowerCase();
+    const qOk = !query || (c.name || "").toLowerCase().includes(query);
+    return typeOk && ownerOk && qOk;
+  });
 
   return (
     <div className="space-y-5">
@@ -101,7 +110,39 @@ export default function CategoriesPage() {
         }
       />
 
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Input
+          name="search"
+          placeholder="Search categories..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="w-full sm:w-64"
+        />
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Source filter">
+          <span className="text-xs font-medium text-zinc-400">Source</span>
+          {[
+            { value: "all", label: "All" },
+            { value: "mine", label: "Mine" },
+            { value: "default", label: "Default" },
+          ].map((o) => (
+            <button
+              key={o.value}
+              onClick={() => setOwner(o.value)}
+              className={cn(
+                "rounded-lg px-4 py-2 text-sm font-medium transition",
+                owner === o.value
+                  ? "bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              )}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Type filter">
+        <span className="text-xs font-medium text-zinc-400">Type</span>
         {["all", "income", "expense"].map((f) => (
           <button
             key={f}
@@ -123,9 +164,13 @@ export default function CategoriesPage() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={Tags}
-          title="No categories"
-          description="Create categories to organize your money."
-          action={<Button onClick={openCreate}>Create category</Button>}
+          title={filtersActive ? "No categories match" : "No categories"}
+          description={
+            filtersActive
+              ? "Try a different search or filter."
+              : "Create categories to organize your money."
+          }
+          action={filtersActive ? undefined : <Button onClick={openCreate}>Create category</Button>}
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -147,20 +192,24 @@ export default function CategoriesPage() {
                   >
                     {(c.name || "?").charAt(0).toUpperCase()}
                   </div>
-                  <div className="flex gap-1 opacity-0 transition group-hover:opacity-100">
-                    <button
-                      onClick={() => openEdit(c)}
-                      className="rounded p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => setDeleteTarget(c)}
-                      className="rounded p-1.5 text-zinc-400 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                  {c.userId !== null && (
+                    <div className="flex gap-1 opacity-0 transition group-hover:opacity-100">
+                      <button
+                        onClick={() => openEdit(c)}
+                        aria-label={`Edit ${c.name}`}
+                        className="rounded p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(c)}
+                        aria-label={`Delete ${c.name}`}
+                        className="rounded p-1.5 text-zinc-400 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <p className="mt-3 text-sm font-semibold">{c.name}</p>
                 <div className="mt-1 flex items-center gap-2">

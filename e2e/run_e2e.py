@@ -53,6 +53,11 @@ import contextlib
 import os
 import re
 import sys
+
+# Windows console defaults to cp1252 and chokes on ৳ (BDT) in failure text.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 import tempfile
 import time
 from datetime import date
@@ -375,12 +380,26 @@ def ph_categories(c: Ctx):
 
     with c.step("create user category"):
         goto(p, "/categories")
+        unique_name = f"E2E Temp Cat {int(time.time())}"
         p.get_by_role("button", name="New category").click()
         wait_visible(p.get_by_text("New category", exact=False))
-        p.get_by_label("Name").fill("E2E Temp Cat")
+        p.get_by_label("Name").fill(unique_name)
         p.get_by_role("button", name="Create", exact=True).click()
         toast(p, "Category created")
-        wait_visible(p.get_by_text("E2E Temp Cat"))
+        wait_visible(p.get_by_text(unique_name))
+
+    with c.step("search + source filter narrow the list"):
+        s = p.get_by_placeholder("Search categories...")
+        s.fill("E2E Temp")
+        wait_visible(p.locator("div.group", has_text="E2E Temp Cat"))
+        # AnimatePresence keeps exiting cards mounted briefly -> poll instead of instant count
+        poll("search filters out defaults", lambda: p.locator("div.group", has_text="default").count(), lambda n: n == 0)
+        s.fill("")
+        p.get_by_role("button", name="Default", exact=True).click()
+        wait_gone(p.locator("div.group", has_text="E2E Temp Cat"))
+        assert p.locator("div.group", has_text="default").count() >= 1, "Default filter shows no defaults"
+        p.get_by_role("button", name="All", exact=True).click()
+        wait_visible(p.locator("div.group", has_text="E2E Temp Cat"))
 
     with c.step("delete user category via confirm dialog"):
         card = p.locator("div.group", has_text="E2E Temp Cat").first

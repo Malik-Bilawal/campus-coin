@@ -16,6 +16,7 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [devLink, setDevLink] = useState("");
+  const [devMissing, setDevMissing] = useState(null);
   const [error, setError] = useState("");
 
   async function onSubmit(e) {
@@ -26,6 +27,7 @@ export default function ForgotPasswordPage() {
       const res = await api.post("/auth/forgot-password", { email });
       setDone(true);
       if (res.data?.devResetUrl) setDevLink(res.data.devResetUrl);
+      setDevMissing(res.data && "devAccountExists" in res.data ? !res.data.devAccountExists : null);
       addToast({ type: "success", message: res.message });
     } catch (err) {
       setError(err.message);
@@ -85,6 +87,13 @@ export default function ForgotPasswordPage() {
             </AuthSuccess>
           </motion.div>
 
+          {devMissing && (
+            <div className="rounded-xl border border-amber-400/50 bg-amber-50 px-3.5 py-3 text-sm text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+              Dev only: no account exists for this email. Production always shows the same generic
+              message so registered emails can&apos;t be discovered.
+            </div>
+          )}
+
           {devLink && (
             <div className="rounded-xl border border-dashed border-zinc-300 p-3.5 dark:border-zinc-700">
               <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-zinc-400">
@@ -108,6 +117,7 @@ export default function ForgotPasswordPage() {
             onClick={() => {
               setDone(false);
               setDevLink("");
+              setDevMissing(null);
               setEmail("");
             }}
           >

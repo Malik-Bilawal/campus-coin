@@ -42,11 +42,12 @@ export const createCategory = asyncHandler(async (req, res) => {
 });
 
 export const updateCategory = asyncHandler(async (req, res) => {
-  const category = await Category.findOne({ _id: req.params.id, userId: req.user.id });
+  const category = await Category.findOne({ _id: req.params.id });
   if (!category) throw ApiError.notFound("Category not found");
-  if (category.isDefault && category.userId === null) {
-    throw ApiError.forbidden("System default categories cannot be edited");
+  if (category.userId == null) {
+    throw ApiError.forbidden("Default categories can't be edited");
   }
+  if (String(category.userId) !== req.user.id) throw ApiError.notFound("Category not found");
 
   const { name, icon, color, type } = req.body;
   if (name) category.name = name;
@@ -64,11 +65,19 @@ export const updateCategory = asyncHandler(async (req, res) => {
 });
 
 export const deleteCategory = asyncHandler(async (req, res) => {
-  const category = await Category.findOne({ _id: req.params.id, userId: req.user.id });
+  const category = await Category.findOne({ _id: req.params.id });
   if (!category) throw ApiError.notFound("Category not found");
+  if (category.userId == null) {
+    throw ApiError.forbidden("Default categories can't be deleted");
+  }
+  if (String(category.userId) !== req.user.id) throw ApiError.notFound("Category not found");
 
-  const used = await Transaction.exists({ userId: req.user.id, categoryId: category._id });
-  if (used) throw ApiError.conflict("Cannot delete: transactions exist in this category");
+  const count = await Transaction.countDocuments({ userId: req.user.id, categoryId: category._id });
+  if (count) {
+    throw ApiError.conflict(
+      `This category has ${count} transaction${count === 1 ? "" : "s"} — reassign or delete them first`
+    );
+  }
 
   await category.deleteOne();
   return sendSuccess(res, null, "Category deleted");

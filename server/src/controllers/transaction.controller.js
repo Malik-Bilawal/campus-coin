@@ -83,8 +83,19 @@ export const listTransactions = asyncHandler(async (req, res) => {
   });
 });
 
+const MAX_AMOUNT = 10000000;
+
+function assertAmount(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0.01 || n > MAX_AMOUNT) {
+    throw ApiError.badRequest("Amount must be between 0.01 and 10,000,000");
+  }
+  return n;
+}
+
 export const createTransaction = asyncHandler(async (req, res) => {
   let { type, amount, categoryId, note, date, isRecurring, recurringDay, aiSuggested } = req.body;
+  amount = assertAmount(amount);
 
   let usedAi = !!aiSuggested;
 
@@ -159,7 +170,7 @@ export const updateTransaction = asyncHandler(async (req, res) => {
     tx.categoryId = categoryId;
   }
   if (type) tx.type = type;
-  if (amount !== undefined) tx.amount = amount;
+  if (amount !== undefined) tx.amount = assertAmount(amount);
   if (note !== undefined) tx.note = note;
   if (date) tx.date = date;
   if (isRecurring !== undefined) tx.isRecurring = isRecurring;
@@ -221,6 +232,9 @@ export const importTransactions = asyncHandler(async (req, res) => {
   const { rows } = req.body; // [{type, amount, categoryId, note, date}]
   if (!Array.isArray(rows) || rows.length === 0) {
     throw ApiError.badRequest("rows required");
+  }
+  if (rows.some((r) => Number(r.amount) > MAX_AMOUNT)) {
+    throw ApiError.badRequest("Amount must be between 0.01 and 10,000,000 — a row exceeds the limit");
   }
 
   const docs = rows

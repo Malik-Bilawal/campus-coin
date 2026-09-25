@@ -18,7 +18,7 @@ export async function notifyUser(userId, { type = "info", message, title }) {
 }
 
 export async function broadcastNotification({ type = "announcement", message, title }) {
-  const users = await User.find({ isActive: true }).select("_id").lean();
+  const users = await User.find({ isActive: true, role: "student" }).select("_id").lean();
   if (!users.length) return 0;
 
   const docs = users.map((u) => ({

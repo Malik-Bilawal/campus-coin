@@ -239,7 +239,7 @@ export default function BudgetsPage() {
             label={`Monthly limit (${currency})`}
             name="limit"
             type="number"
-            min="0"
+            min="1"
             step="0.01"
             required
             placeholder="e.g. 3000"

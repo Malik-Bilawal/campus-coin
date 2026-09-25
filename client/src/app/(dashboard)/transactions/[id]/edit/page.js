@@ -141,6 +141,7 @@ export default function EditTransactionPage({ params }) {
             type="number"
             step="0.01"
             min="0.01"
+            max="10000000"
             required
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}

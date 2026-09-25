@@ -202,6 +202,7 @@ export default function NewTransactionPage() {
             type="number"
             step="0.01"
             min="0.01"
+            max="10000000"
             required
             placeholder="0.00"
             value={form.amount}

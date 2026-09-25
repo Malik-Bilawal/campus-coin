@@ -48,6 +48,10 @@ export const listBudgets = asyncHandler(async (req, res) => {
 export const upsertBudget = asyncHandler(async (req, res) => {
   const { categoryId, month, limit } = req.body;
   const m = month || monthString();
+  const limitNum = Number(limit);
+  if (!Number.isFinite(limitNum) || limitNum < 1) {
+    throw ApiError.badRequest("Budget limit must be at least 1");
+  }
 
   const category = await Category.findOne({
     _id: categoryId,
@@ -57,7 +61,7 @@ export const upsertBudget = asyncHandler(async (req, res) => {
 
   const budget = await Budget.findOneAndUpdate(
     { userId: req.user.id, categoryId, month: m },
-    { limit, userId: req.user.id, categoryId, month: m },
+    { limit: limitNum, userId: req.user.id, categoryId, month: m },
     { new: true, upsert: true, runValidators: true }
   ).populate("categoryId", "name type icon color");
 
@@ -65,12 +69,12 @@ export const upsertBudget = asyncHandler(async (req, res) => {
   await notifyUser(req.user.id, {
     type: "budget",
     title: "Budget saved",
-    message: `${m} budget for ${catName} set to ${limit}.`,
+    message: `${m} budget for ${catName} set to ${limitNum}.`,
   });
   emitBudgetUpdate(req.user.id, {
     categoryId: String(categoryId),
     month: m,
-    limit,
+    limit: limitNum,
     spent: 0,
   });
 
