@@ -61,6 +61,13 @@ function LoginForm() {
           >
             Create an account
           </Link>
+          <span className="mx-2 text-zinc-300 dark:text-zinc-600">·</span>
+          <Link
+            href="/admin-login"
+            className="font-medium text-zinc-500 hover:text-honey-600 hover:underline dark:text-zinc-400"
+          >
+            Admin sign in
+          </Link>
         </>
       }
     >

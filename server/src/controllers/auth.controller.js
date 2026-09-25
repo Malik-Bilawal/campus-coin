@@ -148,6 +148,16 @@ export const register = asyncHandler(async (req, res) => {
   return sendSuccess(res, { user: user.toSafeJSON(), ...tokens }, "Account created", 201);
 });
 
+async function bumpLoginStreak(user) {
+  const now = new Date();
+  const last = user.lastLoginAt;
+  const dayDiff = last ? Math.floor((now - last) / (1000 * 60 * 60 * 24)) : null;
+  if (dayDiff === 1) user.loginStreak = (user.loginStreak || 0) + 1;
+  else if (dayDiff === null || dayDiff > 1) user.loginStreak = 1;
+  user.lastLoginAt = now;
+  await user.save();
+}
+
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -158,13 +168,24 @@ export const login = asyncHandler(async (req, res) => {
   const ok = await user.comparePassword(password);
   if (!ok) throw ApiError.unauthorized("Invalid email or password");
 
-  const now = new Date();
-  const last = user.lastLoginAt;
-  const dayDiff = last ? Math.floor((now - last) / (1000 * 60 * 60 * 24)) : null;
-  if (dayDiff === 1) user.loginStreak = (user.loginStreak || 0) + 1;
-  else if (dayDiff === null || dayDiff > 1) user.loginStreak = 1;
-  user.lastLoginAt = now;
-  await user.save();
+  await bumpLoginStreak(user);
+
+  const tokens = setAuthCookies(res, user._id, user.role, user.email);
+  return sendSuccess(res, { user: user.toSafeJSON(), ...tokens }, "Logged in");
+});
+
+/** Admin-only login: same flow as login but requires role=admin (never reveals which check failed). */
+export const adminLogin = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+
+  const user = await User.findOne({ email: email.toLowerCase() }).select("+password");
+  if (!user || user.role !== "admin") throw ApiError.unauthorized("Invalid email or password");
+  if (!user.isActive) throw ApiError.forbidden("Account disabled. Contact admin.");
+
+  const ok = await user.comparePassword(password);
+  if (!ok) throw ApiError.unauthorized("Invalid email or password");
+
+  await bumpLoginStreak(user);
 
   const tokens = setAuthCookies(res, user._id, user.role, user.email);
   return sendSuccess(res, { user: user.toSafeJSON(), ...tokens }, "Logged in");

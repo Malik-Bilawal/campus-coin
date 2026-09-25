@@ -30,7 +30,7 @@ router.post(
       $or: [{ userId: req.user.id }, { userId: null }],
     }).select("name");
     const names = cats.map((c) => c.name);
-    const result = await aiCategorize(note, type, names);
+    const result = await aiCategorize(note, type, names, req.user.id);
     return sendSuccess(res, { suggestion: result });
   })
 );
@@ -60,7 +60,7 @@ router.post(
     const names = cats.map((c) => c.name);
 
     const enriched = await aiCategorizeBatch(
-      rows.map((r) => ({ ...r, availableNames: names }))
+      rows.map((r) => ({ ...r, availableNames: names, userId: req.user.id }))
     );
     return sendSuccess(res, { rows: enriched });
   })

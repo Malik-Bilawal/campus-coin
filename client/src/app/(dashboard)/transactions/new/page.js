@@ -30,14 +30,18 @@ export default function NewTransactionPage() {
   const [loading, setLoading] = useState(false);
   const [aiSuggest, setAiSuggest] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiDismissed, setAiDismissed] = useState(false);
+  const [aiAccepted, setAiAccepted] = useState(false);
 
   useEffect(() => {
     api
       .get("/categories")
       .then((r) => {
+        const param = new URLSearchParams(window.location.search).get("type");
+        const type = param === "income" || param === "expense" ? param : "expense";
         setCategories(r.data.categories);
-        const firstExp = r.data.categories.find((c) => c.type === "expense");
-        if (firstExp) setForm((f) => ({ ...f, categoryId: firstExp._id }));
+        const first = r.data.categories.find((c) => c.type === type);
+        setForm((f) => ({ ...f, type, categoryId: first?._id || "" }));
       })
       .catch(() => {});
   }, []);
@@ -46,8 +50,11 @@ export default function NewTransactionPage() {
   useEffect(() => {
     if (!form.note || form.note.length < 4) {
       setAiSuggest(null);
+      setAiAccepted(false);
       return;
     }
+    setAiDismissed(false);
+    setAiAccepted(false);
     const t = setTimeout(async () => {
       setAiLoading(true);
       try {
@@ -56,12 +63,6 @@ export default function NewTransactionPage() {
           type: form.type,
         });
         setAiSuggest(res.data.suggestion);
-        const match = categories.find(
-          (c) => c.name.toLowerCase() === String(res.data.suggestion?.name).toLowerCase()
-        );
-        if (match && res.data.suggestion?.confidence >= 0.5) {
-          setForm((f) => ({ ...f, categoryId: match._id }));
-        }
       } catch {
         setAiSuggest(null);
       } finally {
@@ -69,7 +70,7 @@ export default function NewTransactionPage() {
       }
     }, 500);
     return () => clearTimeout(t);
-  }, [form.note, form.type, categories]);
+  }, [form.note, form.type]);
 
   const filtered = categories.filter((c) => c.type === form.type);
 
@@ -80,6 +81,25 @@ export default function NewTransactionPage() {
       type,
       categoryId: first?._id || "",
     });
+    setAiAccepted(false);
+    setAiDismissed(false);
+  }
+
+  function acceptSuggestion() {
+    const match = categories.find(
+      (c) => c.name.toLowerCase() === String(aiSuggest?.name).toLowerCase()
+    );
+    if (!match) {
+      addToast({ type: "warning", message: "Category not found in your list" });
+      return;
+    }
+    setForm((f) => ({ ...f, categoryId: match._id }));
+    setAiAccepted(true);
+  }
+
+  function ignoreSuggestion() {
+    setAiDismissed(true);
+    setAiAccepted(false);
   }
 
   async function onSubmit(e) {
@@ -103,7 +123,7 @@ export default function NewTransactionPage() {
         date: new Date(form.date).toISOString(),
         isRecurring: form.isRecurring,
         recurringDay: form.isRecurring && form.recurringDay ? Number(form.recurringDay) : undefined,
-        aiSuggested: !!aiSuggest?.aiSuggested,
+        aiSuggested: aiAccepted && !!aiSuggest?.aiSuggested,
       });
 
       const alerts = res.data?.alerts || [];
@@ -221,11 +241,11 @@ export default function NewTransactionPage() {
             onChange={(e) => setForm({ ...form, note: e.target.value })}
           />
 
-          {(aiLoading || aiSuggest) && form.note.length >= 4 && (
+          {(aiLoading || (aiSuggest && !aiDismissed)) && form.note.length >= 4 && (
             <motion.div
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-xs ${
+              className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-xs ${
                 aiSuggest?.aiSuggested
                   ? "border-honey-500/40 bg-honey-500/10 text-honey-800 dark:text-honey-200"
                   : "border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900"
@@ -236,11 +256,26 @@ export default function NewTransactionPage() {
                 {aiLoading
                   ? "AI thinking..."
                   : aiSuggest?.aiSuggested
-                    ? `AI suggests: ${aiSuggest.name} (${Math.round((aiSuggest.confidence || 0) * 100)}%)`
+                    ? `AI suggested: ${aiSuggest.name} (${Math.round((aiSuggest.confidence || 0) * 100)}%)`
                     : `Rules suggest: ${aiSuggest?.name}`}
               </span>
-              {aiSuggest && !aiSuggest.aiSuggested && (
-                <span className="text-[10px] uppercase opacity-60">fallback</span>
+              {!aiLoading && aiSuggest && (
+                <span className="flex shrink-0 items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={acceptSuggestion}
+                    className="rounded-lg bg-honey-500 px-2.5 py-1 text-[11px] font-semibold text-white transition hover:bg-honey-600"
+                  >
+                    {aiAccepted ? "Accepted ✓" : aiSuggest.aiSuggested ? "Accept" : "Apply"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={ignoreSuggestion}
+                    className="rounded-lg border border-zinc-300 px-2.5 py-1 text-[11px] font-medium text-zinc-500 transition hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-800"
+                  >
+                    Ignore
+                  </button>
+                </span>
               )}
             </motion.div>
           )}

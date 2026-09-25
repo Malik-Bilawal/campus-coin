@@ -1,3 +1,5 @@
+import mongoose from "mongoose";
+import { Transaction } from "../../models/Transaction.js";
 import { llmChat, parseJsonLoose } from "./provider.js";
 
 const KEYWORD_RULES = [
@@ -34,8 +36,86 @@ Income categories: Allowance, Part-time Job, Scholarship, Gift, Other Income.
 Expense categories: Food, Transport, Hostel/Rent, Academies, Subscriptions, Entertainment, Miscellaneous.
 Prefer exact names from the lists. Be conservative with confidence.`;
 
-export async function aiCategorize(note, type = "expense", availableNames = []) {
+function tokenize(note) {
+  return String(note || "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 3);
+}
+
+/**
+ * Learns from the user's own history: token -> category frequency, with
+ * explicit user corrections weighted 3x. Lets repeated personal notes
+ * (e.g. "gym fee", "bus pass") categorize correctly without an LLM call.
+ */
+async function buildUserLearningMap(userId) {
+  const rows = await Transaction.aggregate([
+    { $match: { userId: new mongoose.Types.ObjectId(userId), note: { $ne: "" } } },
+    { $sort: { date: -1 } },
+    { $limit: 500 },
+    {
+      $lookup: { from: "categories", localField: "categoryId", foreignField: "_id", as: "cat" },
+    },
+    { $unwind: { path: "$cat", preserveNullAndEmptyArrays: true } },
+    { $match: { "cat.name": { $exists: true } } },
+    {
+      $project: {
+        note: 1,
+        name: "$cat.name",
+        w: { $cond: ["$userCorrectedCategory", 3, 1] },
+      },
+    },
+  ]);
+
+  const map = {};
+  for (const r of rows) {
+    for (const t of tokenize(r.note)) {
+      if (!map[t]) map[t] = {};
+      map[t][r.name] = (map[t][r.name] || 0) + r.w;
+    }
+  }
+  return map;
+}
+
+function learnedGuess(note, userMap, availableNames = []) {
+  const votes = {};
+  let matchedTokens = 0;
+  for (const t of tokenize(note)) {
+    const row = userMap[t];
+    if (!row) continue;
+    matchedTokens += 1;
+    for (const [name, w] of Object.entries(row)) votes[name] = (votes[name] || 0) + w;
+  }
+  const top = Object.entries(votes).sort((a, b) => b[1] - a[1])[0];
+  if (!top) return null;
+  // Needs a real signal: several matching tokens, or one strong repeat
+  if (!(matchedTokens >= 2 || top[1] >= 3)) return null;
+  const [name] = top;
+  if (availableNames.length && !availableNames.some((n) => n.toLowerCase() === name.toLowerCase())) {
+    return null;
+  }
+  return {
+    name,
+    confidence: 0.9,
+    reason: "Matched your own past categorizations",
+    source: "user_learning",
+    aiSuggested: true,
+  };
+}
+
+export async function aiCategorize(note, type = "expense", availableNames = [], userId = null) {
   const fallback = ruleCategorize(note, type);
+
+  // 1) Per-user learning beats global rules and the LLM
+  if (userId) {
+    try {
+      const userMap = await buildUserLearningMap(userId);
+      const learned = learnedGuess(note, userMap, availableNames);
+      if (learned) return learned;
+    } catch {
+      /* fall through to LLM/rules */
+    }
+  }
 
   try {
     const names = availableNames.length
@@ -78,7 +158,12 @@ export async function aiCategorize(note, type = "expense", availableNames = []) 
 export async function aiCategorizeBatch(rows) {
   const out = [];
   for (const row of rows) {
-    const result = await aiCategorize(row.note, row.type || "expense", row.availableNames || []);
+    const result = await aiCategorize(
+      row.note,
+      row.type || "expense",
+      row.availableNames || [],
+      row.userId || null
+    );
     out.push({ ...row, ...result });
   }
   return out;

@@ -83,7 +83,8 @@ when keys are missing.
 ## Data / seeding
 
 - System (default) categories are auto-seeded on **every server boot** (`seedSystemCategories` in
-  `server/src/server.js`); user categories are created per user on registration.
+  `server/src/server.js`). Registration does **not** create per-user categories — users see the system
+  defaults and add their own via `POST /api/v1/categories` (per-user rows have `userId` set).
 - `npm run seed` accounts: `admin@campuscoin.app` / `Admin@123`, `demo@campuscoin.app` / `Demo@123`.
 - `npm run seed:reset` (from `src/seeds/seedAtlas.js`) wipes everything and rebuilds: admin +
   `demo@campuscoin.app`/`Demo@123`, `rafi@campuscoin.app`/`Rafi@123`, `nusrat@campuscoin.app`/`Nusrat@123` —

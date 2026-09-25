@@ -4,6 +4,7 @@ import {
   sixMonthTrend,
   dailyWeeklySummary,
   filteredReport,
+  forecastReport,
 } from "../controllers/report.controller.js";
 import { protect } from "../middlewares/auth.js";
 
@@ -14,5 +15,6 @@ router.get("/category", categoryReport);
 router.get("/trend", sixMonthTrend);
 router.get("/daily-weekly", dailyWeeklySummary);
 router.get("/filtered", filteredReport);
+router.get("/forecast", forecastReport);
 
 export default router;

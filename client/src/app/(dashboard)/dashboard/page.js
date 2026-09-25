@@ -104,7 +104,7 @@ export default function DashboardPage() {
                 <Plus className="h-4 w-4" /> Add expense
               </Button>
             </Link>
-            <Link href="/transactions?type=income">
+            <Link href="/transactions/new?type=income">
               <Button variant="ghost">
                 <Plus className="h-4 w-4" /> Add income
               </Button>
@@ -261,7 +261,7 @@ export default function DashboardPage() {
 
           <Card className="p-5">
             <CardHeader
-              title="Pinned tips"
+              title="Tips for you"
               action={
                 <Link href="/tips" className="text-xs text-honey-600 hover:underline">
                   All tips
@@ -271,7 +271,7 @@ export default function DashboardPage() {
             {!data?.pinnedTips?.length ? (
               <div className="py-4 text-center">
                 <Lightbulb className="mx-auto mb-2 h-6 w-6 text-honey-500/50" />
-                <p className="text-xs text-zinc-400">Pin tips you find useful</p>
+                <p className="text-xs text-zinc-400">No tips yet — refresh on the Tips page</p>
               </div>
             ) : (
               <div className="space-y-3">

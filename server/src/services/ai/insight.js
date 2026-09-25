@@ -104,6 +104,25 @@ Highlight patterns, flag big increases, and give ONE simple actionable tip.
 Tone: warm, encouraging, not judgmental. Currency amounts as numbers only.
 No markdown headings. No disclaimer boilerplate.`;
 
+/** One concrete, stats-derived action the student can take next month. */
+function deriveAdvice(stats) {
+  if (!stats.byCategory || stats.byCategory.length === 0) {
+    return "No expenses logged this month — add a few transactions to unlock personalized advice.";
+  }
+  const top = stats.byCategory[0];
+  if (stats.saved < 0) {
+    return `You spent ${Math.abs(stats.saved).toFixed(0)} more than you earned. Cap ${top.name} (your top category at ${top.total.toFixed(0)}) next week to get back on track.`;
+  }
+  if (stats.flags && stats.flags.length) {
+    return `Fix this first: ${stats.flags[0]}. Trim ${top.name} spending to protect the ${stats.saved.toFixed(0)} you saved.`;
+  }
+  const saveRate = stats.income > 0 ? Math.round((stats.saved / stats.income) * 100) : 0;
+  if (saveRate < 20) {
+    return `Aim to save at least 20% of income — you're at ${saveRate}%. Small cuts in ${top.name} can close the gap.`;
+  }
+  return `Solid month with ${saveRate}% saved. Keep ${top.name} steady and move the surplus into your savings goal.`;
+}
+
 export async function generateInsight(userId, monthKey, force = false) {
   const existing = await Insight.findOne({ userId, month: monthKey });
   if (existing && !force) return existing;
@@ -146,12 +165,15 @@ export async function generateInsight(userId, monthKey, force = false) {
     provider = "rules";
   }
 
+  const advice = deriveAdvice(stats);
+
   const insight = await Insight.findOneAndUpdate(
     { userId, month: monthKey },
     {
       userId,
       month: monthKey,
       narrative,
+      advice,
       flags: stats.flags,
       meta: { ...stats, provider },
     },
@@ -161,5 +183,13 @@ export async function generateInsight(userId, monthKey, force = false) {
 }
 
 export async function listInsights(userId) {
-  return Insight.find({ userId }).sort({ month: -1 }).limit(12);
+  const insights = await Insight.find({ userId }).sort({ month: -1 }).limit(12);
+  // Backfill advice for insights generated before the advice field existed
+  for (const i of insights) {
+    if (!i.advice && i.meta) {
+      i.advice = deriveAdvice(i.meta);
+      await i.save({ validateBeforeSave: false });
+    }
+  }
+  return insights;
 }

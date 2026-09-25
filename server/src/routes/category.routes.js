@@ -21,7 +21,7 @@ const createSchema = z.object({
 
 router.get("/", listCategories);
 router.post("/", validate(createSchema), createCategory);
-router.patch("/:id", updateCategory);
+router.patch("/:id", validate(createSchema.partial()), updateCategory);
 router.delete("/:id", deleteCategory);
 
 export default router;

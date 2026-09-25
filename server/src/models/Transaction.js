@@ -13,6 +13,8 @@ const transactionSchema = new mongoose.Schema(
     aiSuggested: { type: Boolean, default: false },
     userCorrectedCategory: { type: Boolean, default: false },
     flags: [{ type: String, enum: ["duplicate", "unusually_large"] }],
+    lastViewedAt: { type: Date },
+    lastEditedAt: { type: Date },
   },
   { timestamps: true }
 );

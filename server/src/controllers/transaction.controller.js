@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Transaction } from "../models/Transaction.js";
 import { Category } from "../models/Category.js";
 import { Budget } from "../models/Budget.js";
@@ -9,6 +10,43 @@ import { checkBudgetAlerts } from "../services/budgetAlerts.js";
 import { aiCategorize } from "../services/ai/categorize.js";
 import { emitToUser } from "../config/socket.js";
 import { notifyUser } from "../services/notify.js";
+
+/** Flags a new expense/income: duplicate (same amount+category within 48h) and
+ *  unusually_large (amount > mean + 2σ of the user's last 90 days of that type). */
+async function detectFlags(userId, { type, amount, categoryId, date, excludeId = null }) {
+  const flags = [];
+  const when = new Date(date || Date.now());
+  const from = new Date(when.getTime() - 48 * 3600 * 1000);
+  const to = new Date(when.getTime() + 48 * 3600 * 1000);
+
+  const dupQuery = {
+    userId,
+    type,
+    amount,
+    categoryId,
+    date: { $gte: from, $lte: to },
+  };
+  if (excludeId) dupQuery._id = { $ne: excludeId };
+  const dup = await Transaction.exists(dupQuery);
+  if (dup) flags.push("duplicate");
+
+  const since = new Date(Date.now() - 90 * 24 * 3600 * 1000);
+  const [stats] = await Transaction.aggregate([
+    { $match: { userId: new mongoose.Types.ObjectId(userId), type, date: { $gte: since } } },
+    {
+      $group: {
+        _id: null,
+        avg: { $avg: "$amount" },
+        sd: { $stdDevSamp: "$amount" },
+        n: { $sum: 1 },
+      },
+    },
+  ]);
+  if (stats && stats.n >= 10 && stats.sd > 0 && amount > stats.avg + 2 * stats.sd) {
+    flags.push("unusually_large");
+  }
+  return flags;
+}
 
 export const listTransactions = asyncHandler(async (req, res) => {
   const { type, categoryId, from, to, q, page = 1, limit = 20 } = req.query;
@@ -59,7 +97,8 @@ export const createTransaction = asyncHandler(async (req, res) => {
     const suggestion = await aiCategorize(
       note,
       type,
-      cats.map((c) => c.name)
+      cats.map((c) => c.name),
+      req.user.id
     );
     const match = cats.find((c) => c.name.toLowerCase() === suggestion.name.toLowerCase());
     if (match) {
@@ -87,6 +126,7 @@ export const createTransaction = asyncHandler(async (req, res) => {
     isRecurring: !!isRecurring,
     recurringDay: recurringDay || undefined,
     aiSuggested: usedAi,
+    flags: await detectFlags(req.user.id, { type, amount, categoryId, date }),
   });
 
   let alerts = [];
@@ -124,6 +164,7 @@ export const updateTransaction = asyncHandler(async (req, res) => {
   if (date) tx.date = date;
   if (isRecurring !== undefined) tx.isRecurring = isRecurring;
   if (recurringDay !== undefined) tx.recurringDay = recurringDay;
+  tx.lastEditedAt = new Date();
 
   await tx.save();
 
@@ -146,7 +187,33 @@ export const getTransaction = asyncHandler(async (req, res) => {
   const tx = await Transaction.findOne({ _id: req.params.id, userId: req.user.id })
     .populate("categoryId", "name type icon color");
   if (!tx) throw ApiError.notFound("Transaction not found");
+  Transaction.updateOne({ _id: tx._id }, { $set: { lastViewedAt: new Date() } }).exec();
   return sendSuccess(res, { transaction: tx });
+});
+
+/** Recently viewed / edited transactions (for the transactions page sidebar card). */
+export const recentTransactions = asyncHandler(async (req, res) => {
+  const [viewed, edited] = await Promise.all([
+    Transaction.find({ userId: req.user.id, lastViewedAt: { $ne: null } })
+      .sort({ lastViewedAt: -1 })
+      .limit(10)
+      .populate("categoryId", "name type icon color"),
+    Transaction.find({ userId: req.user.id, lastEditedAt: { $ne: null } })
+      .sort({ lastEditedAt: -1 })
+      .limit(10)
+      .populate("categoryId", "name type icon color"),
+  ]);
+
+  const map = new Map();
+  for (const t of [...viewed, ...edited]) map.set(String(t._id), t);
+  const touched = (t) =>
+    Math.max(
+      t.lastViewedAt ? new Date(t.lastViewedAt).getTime() : 0,
+      t.lastEditedAt ? new Date(t.lastEditedAt).getTime() : 0
+    );
+
+  const transactions = [...map.values()].sort((a, b) => touched(b) - touched(a)).slice(0, 6);
+  return sendSuccess(res, { transactions });
 });
 
 /** Bulk import (CSV) */
@@ -169,6 +236,21 @@ export const importTransactions = asyncHandler(async (req, res) => {
     }));
 
   const created = await Transaction.insertMany(docs, { ordered: false });
+
+  // flag duplicates / unusually large amounts within the imported batch
+  for (const tx of created) {
+    const flags = await detectFlags(req.user.id, {
+      type: tx.type,
+      amount: tx.amount,
+      categoryId: tx.categoryId,
+      date: tx.date,
+      excludeId: tx._id,
+    });
+    if (flags.length) {
+      tx.flags = flags;
+      await tx.save({ validateBeforeSave: false });
+    }
+  }
 
   // budget alerts for expense imports
   for (const tx of created) {

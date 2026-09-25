@@ -37,7 +37,7 @@ const catSchema = z.object({
 
 router.get("/categories", listDefaultCategories);
 router.post("/categories", validate(catSchema), createDefaultCategory);
-router.patch("/categories/:id", updateDefaultCategory);
+router.patch("/categories/:id", validate(catSchema.partial()), updateDefaultCategory);
 router.delete("/categories/:id", deleteDefaultCategory);
 
 const annSchema = z.object({
@@ -48,7 +48,7 @@ const annSchema = z.object({
 
 router.get("/announcements", listAnnouncements);
 router.post("/announcements", validate(annSchema), createAnnouncement);
-router.patch("/announcements/:id", updateAnnouncement);
+router.patch("/announcements/:id", validate(annSchema.partial()), updateAnnouncement);
 router.delete("/announcements/:id", deleteAnnouncement);
 
 export default router;

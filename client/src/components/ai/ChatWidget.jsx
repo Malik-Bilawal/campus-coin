@@ -226,6 +226,11 @@ export function ChatWidget() {
                 <Send className="h-4 w-4" />
               </button>
             </form>
+
+            <p className="border-t border-amber-500/10 bg-zinc-50/60 px-4 py-1.5 text-center text-[9px] leading-relaxed text-zinc-400 dark:bg-zinc-950/40">
+              BudgetBee is an automated assistant for learning purposes only — not certified
+              financial advice.
+            </p>
           </motion.div>
         )}
       </AnimatePresence>

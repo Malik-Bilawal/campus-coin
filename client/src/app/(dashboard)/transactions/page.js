@@ -12,6 +12,8 @@ import {
   Repeat,
   ChevronLeft,
   ChevronRight,
+  History,
+  Sparkles,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
@@ -35,11 +37,16 @@ export default function TransactionsPage() {
   const [filters, setFilters] = useState({ type: "", categoryId: "", q: "", page: 1 });
   const [categories, setCategories] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [recent, setRecent] = useState([]);
 
   useEffect(() => {
     api
       .get("/categories")
       .then((r) => setCategories(r.data.categories))
+      .catch(() => {});
+    api
+      .get("/transactions/recent")
+      .then((r) => setRecent(r.data.transactions || []))
       .catch(() => {});
   }, []);
 
@@ -127,6 +134,36 @@ export default function TransactionsPage() {
         </div>
       </Card>
 
+      {/* Recently viewed / edited */}
+      {recent.length > 0 && (
+        <Card className="p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <History className="h-4 w-4 text-zinc-400" />
+            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              Recently viewed / edited
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {recent.map((tx) => (
+              <Link key={tx._id} href={`/transactions/${tx._id}/edit`}>
+                <span className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs transition hover:border-honey-500/50 hover:bg-honey-500/10 dark:border-zinc-700 dark:bg-zinc-800/60">
+                  <span className="font-medium text-zinc-700 dark:text-zinc-200">
+                    {tx.note || tx.categoryId?.name || "Transaction"}
+                  </span>
+                  <span className={tx.type === "income" ? "text-emerald-500" : "text-rose-500"}>
+                    {tx.type === "income" ? "+" : "-"}
+                    {formatMoney(tx.amount, currency)}
+                  </span>
+                  {tx.lastEditedAt && (
+                    <span className="text-[10px] uppercase text-zinc-400">edited</span>
+                  )}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {loading ? (
         <SkeletonList count={5} />
       ) : items.length === 0 ? (
@@ -172,6 +209,14 @@ export default function TransactionsPage() {
                     {tx.isRecurring && (
                       <span className="rounded bg-blue-500/15 p-0.5 text-blue-500" title="Recurring">
                         <Repeat className="h-3 w-3" />
+                      </span>
+                    )}
+                    {tx.aiSuggested && !tx.userCorrectedCategory && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded bg-honey-500/15 px-1.5 py-0.5 text-[10px] font-medium text-honey-600 dark:text-honey-400"
+                        title="Category was suggested automatically"
+                      >
+                        <Sparkles className="h-2.5 w-2.5" /> AI suggested
                       </span>
                     )}
                     {tx.flags?.map((f) => (

@@ -8,7 +8,8 @@ import { generateTips } from "../services/tipsEngine.js";
 export const listTips = asyncHandler(async (req, res) => {
   const { status } = req.query;
   const filter = { userId: req.user.id };
-  if (status) filter.status = status;
+  // Dismissed tips stay hidden unless explicitly requested (?status=dismissed)
+  filter.status = status || { $ne: "dismissed" };
 
   const tips = await Tip.find(filter).sort({ status: 1, impactScore: -1, createdAt: -1 });
   return sendSuccess(res, { tips });

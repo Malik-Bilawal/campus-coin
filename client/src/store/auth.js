@@ -60,6 +60,15 @@ export const useAuthStore = create((set, get) => ({
     return res.data.user;
   },
 
+  async adminLogin(email, password) {
+    const res = await api.post("/auth/admin-login", { email, password });
+    set({ user: res.data.user, accessToken: res.data.accessToken });
+    if (res.data.accessToken && typeof window !== "undefined") {
+      sessionStorage.setItem("accessToken", res.data.accessToken);
+    }
+    return res.data.user;
+  },
+
   async register(payload) {
     const res = await api.post("/auth/register", payload);
     set({ user: res.data.user, accessToken: res.data.accessToken });

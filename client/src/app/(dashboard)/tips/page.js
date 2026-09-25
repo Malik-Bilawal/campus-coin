@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Lightbulb, Pin, PinOff, X, RefreshCw, Bookmark } from "lucide-react";
+import { Lightbulb, Pin, PinOff, X, RefreshCw, Bookmark, Download } from "lucide-react";
+import jsPDF from "jspdf";
 import { api } from "@/lib/api";
 import { useUIStore } from "@/store/ui";
 import { cn } from "@/lib/utils";
@@ -72,6 +73,57 @@ export default function TipsPage() {
     }
   }
 
+  function exportSummaryPDF() {
+    if (!tips.length) {
+      addToast({ type: "warning", message: "No tips to export yet" });
+      return;
+    }
+    try {
+      const doc = new jsPDF({ unit: "mm", format: "a4" });
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text("Campus Coin - Saving Tips Summary", 14, 18);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(110);
+      doc.text(
+        `${tips.length} tips (filter: ${filter}) - exported ${new Date().toLocaleDateString()}`,
+        14,
+        24
+      );
+
+      let y = 34;
+      tips.forEach((t, i) => {
+        const bodyLines = doc.splitTextToSize(t.body, 182);
+        if (y + 6 + bodyLines.length * 4.5 + 4 > 285) {
+          doc.addPage();
+          y = 18;
+        }
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(30);
+        doc.text(`${i + 1}. ${t.title}`, 14, y);
+        let cy = y + 5.5;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(80);
+        bodyLines.forEach((line) => {
+          doc.text(line, 14, cy);
+          cy += 4.5;
+        });
+        y = cy + 2;
+        doc.setDrawColor(220);
+        doc.line(14, y, 196, y);
+        y += 6;
+      });
+
+      doc.save("campus-coin-tips.pdf");
+      addToast({ type: "success", message: "Tips summary PDF exported" });
+    } catch (e) {
+      addToast({ type: "error", message: "Export failed: " + e.message });
+    }
+  }
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -79,9 +131,14 @@ export default function TipsPage() {
         subtitle="Ranked by potential savings impact from your own history"
         breadcrumbs={[{ label: "Saving Tips" }]}
         actions={
-          <Button onClick={refresh} isLoading={refreshing}>
-            <RefreshCw className="h-4 w-4" /> Refresh tips
-          </Button>
+          <>
+            <Button variant="ghost" onClick={exportSummaryPDF}>
+              <Download className="h-4 w-4" /> Export summary PDF
+            </Button>
+            <Button onClick={refresh} isLoading={refreshing}>
+              <RefreshCw className="h-4 w-4" /> Refresh tips
+            </Button>
+          </>
         }
       />
 

@@ -5,6 +5,7 @@ import { Tip } from "../models/Tip.js";
 import { Notification } from "../models/Notification.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { sendSuccess } from "../utils/response.js";
+import { materializeRecurringForUser } from "../services/recurring.js";
 
 function monthBounds(date = new Date()) {
   const start = new Date(date.getFullYear(), date.getMonth(), 1);
@@ -16,7 +17,13 @@ export const getDashboard = asyncHandler(async (req, res) => {
   const userId = new mongoose.Types.ObjectId(req.user.id);
   const { start, end } = monthBounds();
 
-  const [summary, topCategory, recentTx, pinnedTips, unreadNotifs, budgetRows] = await Promise.all([
+  try {
+    await materializeRecurringForUser(req.user.id);
+  } catch {
+    /* never block the dashboard on materialization */
+  }
+
+  const [summary, topCategory, recentTx, rankedTips, unreadNotifs, budgetRows] = await Promise.all([
     Transaction.aggregate([
       { $match: { userId, date: { $gte: start, $lt: end } } },
       {
@@ -46,7 +53,9 @@ export const getDashboard = asyncHandler(async (req, res) => {
       .sort({ date: -1 })
       .limit(6)
       .populate("categoryId", "name type icon color"),
-    Tip.find({ userId, status: "pinned" }).sort({ impactScore: -1 }).limit(3),
+    Tip.find({ userId, status: { $in: ["pinned", "active"] } })
+      .sort({ impactScore: -1 })
+      .limit(20),
     Notification.find({ userId, read: false }).sort({ createdAt: -1 }).limit(10),
     Budget.aggregate([
       {
@@ -101,6 +110,12 @@ export const getDashboard = asyncHandler(async (req, res) => {
 
   const income = summary.find((s) => s._id === "income")?.total || 0;
   const expense = summary.find((s) => s._id === "expense")?.total || 0;
+
+  // Widget: pinned tips first, filled up to 3 with the top-ranked active tips
+  const pinnedTips = rankedTips
+    .filter((t) => t.status === "pinned")
+    .concat(rankedTips.filter((t) => t.status === "active"))
+    .slice(0, 3);
 
   const monthTrend = await Transaction.aggregate([
     {

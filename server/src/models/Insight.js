@@ -5,6 +5,7 @@ const insightSchema = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     month: { type: String, required: true, match: /^\d{4}-\d{2}$/ },
     narrative: { type: String, required: true },
+    advice: { type: String },
     flags: [{ type: String }],
     meta: { type: mongoose.Schema.Types.Mixed, default: {} },
   },

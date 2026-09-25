@@ -13,10 +13,11 @@ export async function generateTips(userId) {
   const oid = new mongoose.Types.ObjectId(userId);
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const prevStart = monthsAgo(1);
-  const prevEnd = monthStart;
+  const histStart = monthsAgo(3);
+  histStart.setDate(1);
+  histStart.setHours(0, 0, 0, 0);
 
-  const [byCategoryThis, byCategoryPrev, budgets, savings] = await Promise.all([
+  const [byCategoryThis, byCategoryHist, histMonths, budgets, savings] = await Promise.all([
     Transaction.aggregate([
       { $match: { userId: oid, type: "expense", date: { $gte: monthStart } } },
       { $group: { _id: "$categoryId", total: { $sum: "$amount" } } },
@@ -31,8 +32,9 @@ export async function generateTips(userId) {
       },
       { $unwind: { path: "$cat", preserveNullAndEmptyArrays: true } },
     ]),
+    // 3-month history (avg monthly spend per category = total / months-with-data)
     Transaction.aggregate([
-      { $match: { userId: oid, type: "expense", date: { $gte: prevStart, $lt: prevEnd } } },
+      { $match: { userId: oid, type: "expense", date: { $gte: histStart, $lt: monthStart } } },
       { $group: { _id: "$categoryId", total: { $sum: "$amount" } } },
       {
         $lookup: {
@@ -43,6 +45,11 @@ export async function generateTips(userId) {
         },
       },
       { $unwind: { path: "$cat", preserveNullAndEmptyArrays: true } },
+    ]),
+    Transaction.aggregate([
+      { $match: { userId: oid, type: "expense", date: { $gte: histStart, $lt: monthStart } } },
+      { $group: { _id: { y: { $year: "$date" }, m: { $month: "$date" } } } },
+      { $group: { _id: null, months: { $sum: 1 } } },
     ]),
     Budget.find({ userId, month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}` })
       .populate("categoryId", "name"),
@@ -62,7 +69,10 @@ export async function generateTips(userId) {
     ]),
   ]);
 
-  const prevMap = Object.fromEntries(byCategoryPrev.map((r) => [String(r._id), r.total]));
+  const histDivisor = Math.max(1, histMonths[0]?.months || 1);
+  const prevMap = Object.fromEntries(
+    byCategoryHist.map((r) => [String(r._id), r.total / histDivisor])
+  );
   const tips = [];
 
   for (const row of byCategoryThis.slice(0, 5)) {
@@ -73,7 +83,7 @@ export async function generateTips(userId) {
       const rise = Math.round(((row.total - prev) / prev) * 100);
       tips.push({
         title: `${name} spending is up ${rise}%`,
-        body: `You spent more on ${name} this month vs last. Try a weekly cap to bring it back near ${prev.toFixed(0)}.`,
+        body: `You spent more on ${name} this month vs your 3-month average. Try a weekly cap to bring it back near ${prev.toFixed(0)}.`,
         impactScore: Math.min(100, rise),
         category: name,
       });

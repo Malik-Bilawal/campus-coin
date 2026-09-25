@@ -2,7 +2,14 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, RefreshCw, History, AlertTriangle } from "lucide-react";
+import {
+  Sparkles,
+  RefreshCw,
+  History,
+  AlertTriangle,
+  Lightbulb,
+  Bookmark,
+} from "lucide-react";
 import { api } from "@/lib/api";
 import { useUIStore } from "@/store/ui";
 import { monthKey, monthLabel } from "@/lib/utils";
@@ -20,18 +27,22 @@ export default function InsightsPage() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [bookmarks, setBookmarks] = useState([]);
+  const [togglingBm, setTogglingBm] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [ins, hist, st] = await Promise.all([
+      const [ins, hist, st, bms] = await Promise.all([
         api.post(`/ai/insight/${month}`).catch(() => ({ data: { insight: null } })),
         api.get("/ai/insights"),
         api.get(`/ai/insight-stats/${month}`),
+        api.get("/bookmarks").catch(() => ({ data: { bookmarks: [] } })),
       ]);
       setInsight(ins.data?.insight || null);
       setHistory(hist.data?.insights || []);
       setStats(st.data?.stats || null);
+      setBookmarks(bms.data?.bookmarks || []);
     } catch (e) {
       addToast({ type: "error", message: e.message });
     } finally {
@@ -42,6 +53,42 @@ export default function InsightsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const bookmarked =
+    !!insight &&
+    bookmarks.some(
+      (b) => b.refModel === "Insight" && String(b.refId) === String(insight._id)
+    );
+
+  async function toggleBookmark() {
+    if (!insight || togglingBm) return;
+    setTogglingBm(true);
+    try {
+      const res = await api.post("/bookmarks", { refModel: "Insight", refId: insight._id });
+      const removed = !!res.data?.removed;
+      setBookmarks((prev) =>
+        removed
+          ? prev.filter((b) => !(b.refModel === "Insight" && String(b.refId) === String(insight._id)))
+          : [
+              ...prev,
+              {
+                refModel: "Insight",
+                refId: insight._id,
+                title: `Insight ${insight.month}`,
+                snippet: (insight.narrative || "").slice(0, 120),
+              },
+            ]
+      );
+      addToast({
+        type: "success",
+        message: removed ? "Bookmark removed" : "Insight bookmarked",
+      });
+    } catch (e) {
+      addToast({ type: "error", message: e.message });
+    } finally {
+      setTogglingBm(false);
+    }
+  }
 
   async function regenerate() {
     setGenerating(true);
@@ -102,10 +149,41 @@ export default function InsightsPage() {
                   provider: {insight?.meta?.provider || (insight ? "cached" : "—")}
                 </p>
               </div>
+              {insight && (
+                <button
+                  onClick={toggleBookmark}
+                  disabled={togglingBm}
+                  title={bookmarked ? "Remove bookmark" : "Bookmark this insight"}
+                  className={`ml-auto rounded-lg p-2 transition ${
+                    bookmarked
+                      ? "bg-honey-500/20 text-honey-600 dark:text-honey-400"
+                      : "text-zinc-400 hover:bg-zinc-100 hover:text-honey-500 dark:hover:bg-zinc-800"
+                  }`}
+                >
+                  <Bookmark
+                    className={`h-4 w-4 ${bookmarked ? "fill-current" : ""}`}
+                  />
+                </button>
+              )}
             </div>
             <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-200">
               {insight?.narrative || "No insight yet — click Regenerate."}
             </p>
+            {insight?.advice && (
+              <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3.5 py-3">
+                <div className="rounded-lg bg-emerald-500/15 p-1.5">
+                  <Lightbulb className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    Next step
+                  </p>
+                  <p className="mt-0.5 text-sm leading-relaxed text-emerald-700 dark:text-emerald-300">
+                    {insight.advice}
+                  </p>
+                </div>
+              </div>
+            )}
             {insight?.flags?.length > 0 && (
               <div className="mt-5 space-y-2">
                 {insight.flags.map((f, i) => (
@@ -178,6 +256,11 @@ export default function InsightsPage() {
                 <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
                   {h.narrative}
                 </p>
+                {h.advice && (
+                  <p className="mt-2 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
+                    {h.advice}
+                  </p>
+                )}
                 {h.flags?.length > 0 && (
                   <ul className="mt-2 list-inside list-disc text-xs text-amber-600">
                     {h.flags.map((f, fi) => (

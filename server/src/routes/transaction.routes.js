@@ -5,6 +5,7 @@ import {
   updateTransaction,
   deleteTransaction,
   getTransaction,
+  recentTransactions,
   importTransactions,
 } from "../controllers/transaction.controller.js";
 import { protect } from "../middlewares/auth.js";
@@ -44,6 +45,7 @@ const importSchema = z.object({
 });
 
 router.get("/", listTransactions);
+router.get("/recent", recentTransactions); // must stay above "/:id"
 router.post("/import", validate(importSchema), importTransactions);
 router.get("/:id", getTransaction);
 router.post("/", validate(txSchema), createTransaction);

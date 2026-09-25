@@ -121,6 +121,58 @@ export const dailyWeeklySummary = asyncHandler(async (req, res) => {
   });
 });
 
+/** Linear (least-squares) projection of next month's expense from up to 6 past months. */
+export const forecastReport = asyncHandler(async (req, res) => {
+  const userId = new mongoose.Types.ObjectId(req.user.id);
+  const now = new Date();
+  const since = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+  const rows = await Transaction.aggregate([
+    { $match: { userId, type: "expense", date: { $gte: since } } },
+    { $group: { _id: { y: { $year: "$date" }, m: { $month: "$date" } }, total: { $sum: "$amount" } } },
+    { $sort: { "_id.y": 1, "_id.m": 1 } },
+  ]);
+
+  const series = rows.map((r) => ({
+    month: `${r._id.y}-${String(r._id.m).padStart(2, "0")}`,
+    total: Math.round(r.total * 100) / 100,
+  }));
+
+  let projected = series.length ? series[series.length - 1].total : 0;
+  let method = "last_month";
+
+  if (series.length >= 3) {
+    const pts = series.slice(-6);
+    const n = pts.length;
+    const xs = pts.map((_, i) => i);
+    const ys = pts.map((p) => p.total);
+    const sumX = xs.reduce((a, x) => a + x, 0);
+    const sumY = ys.reduce((a, y) => a + y, 0);
+    const sumXY = xs.reduce((a, x, i) => a + x * ys[i], 0);
+    const sumXX = xs.reduce((a, x) => a + x * x, 0);
+    const denom = n * sumXX - sumX * sumX;
+    const slope = denom === 0 ? 0 : (n * sumXY - sumX * sumY) / denom;
+    const intercept = (sumY - slope * sumX) / n;
+    projected = Math.max(0, Math.round((intercept + slope * n) * 100) / 100);
+    method = "linear_trend";
+  } else if (series.length === 2) {
+    projected = Math.max(0, Math.round(((series[0].total + series[1].total) / 2) * 100) / 100);
+    method = "average";
+  } else if (series.length === 0) {
+    method = "no_data";
+  }
+
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const forecastMonth = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
+
+  return sendSuccess(res, {
+    series,
+    forecastMonth,
+    projectedExpense: Math.round(projected),
+    method,
+  });
+});
+
 export const filteredReport = asyncHandler(async (req, res) => {
   const userId = new mongoose.Types.ObjectId(req.user.id);
   const { from, to, type, categoryId } = req.query;
