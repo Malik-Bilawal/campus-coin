@@ -18,6 +18,13 @@ const envSchema = z.object({
   GROQ_MODEL: z.string().optional(),
   OPENROUTER_API_KEY: z.string().optional(),
   OPENROUTER_MODEL: z.string().optional(),
+  // SMTP is optional — without SMTP_HOST the app falls back to console/dev payload
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_SECURE: z.string().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  MAIL_FROM: z.string().default("Campus Coin <no-reply@campuscoin.app>"),
 });
 
 const parsed = envSchema.safeParse(process.env);

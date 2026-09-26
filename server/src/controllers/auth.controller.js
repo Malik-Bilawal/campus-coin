@@ -6,6 +6,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { sendSuccess } from "../utils/response.js";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/token.js";
 import { env } from "../config/env.js";
+import { sendOtpEmail, sendResetEmail } from "../services/mail.service.js";
 
 const REFRESH_COOKIE = "refreshToken";
 const OTP_TTL_MS = 10 * 60 * 1000;
@@ -60,14 +61,18 @@ export const requestOtp = asyncHandler(async (req, res) => {
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
 
-  // No SMTP in this project yet — surface OTP in dev for demo/judges
-  if (env.NODE_ENV === "development") {
+  // Real email when SMTP is configured; otherwise keep the dev fallback
+  const mail = await sendOtpEmail(email, otp, 10);
+  if (!mail.sent && env.NODE_ENV === "development") {
     console.log(`[OTP] ${email} → ${otp} (expires ${otpExpires.toISOString()})`);
   }
 
   return sendSuccess(
     res,
-    { devOtp: env.NODE_ENV === "development" ? otp : undefined, expiresInMin: 10 },
+    {
+      devOtp: !mail.sent && env.NODE_ENV === "development" ? otp : undefined,
+      expiresInMin: 10,
+    },
     "Verification code sent to your email"
   );
 });
@@ -236,9 +241,17 @@ export const forgotPassword = asyncHandler(async (req, res) => {
 
   const resetUrl = `${env.CLIENT_URL}/reset-password?token=${rawToken}`;
 
-  if (dev) console.log(`[RESET LINK] ${resetUrl}`);
+  const mail = await sendResetEmail(user.email, resetUrl);
 
-  return sendSuccess(res, dev ? { devAccountExists: true, devResetUrl: resetUrl } : null, message);
+  if (!dev) return sendSuccess(res, null, message);
+
+  // Dev-only helpers, and the raw link only when email delivery didn't happen
+  const data = { devAccountExists: true };
+  if (!mail.sent) {
+    console.log(`[RESET LINK] ${resetUrl}`);
+    data.devResetUrl = resetUrl;
+  }
+  return sendSuccess(res, data, message);
 });
 
 export const resetPassword = asyncHandler(async (req, res) => {

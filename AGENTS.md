@@ -44,8 +44,11 @@ npm run lint       # next lint (eslint-config-next / core-web-vitals)
   a boot during a blip falls back to memory and the app silently serves an empty DB (logins 401).
 - `atlas-credentials.env` (repo root) holds real Atlas credentials. It is gitignored — never commit,
   never echo its contents.
-- No SMTP anywhere: OTPs are printed to the server console as `[OTP] email -> code` and returned as
-  `devOtp` when `NODE_ENV=development`; password reset links print as `[RESET LINK] <url>`.
+- **Mail**: OTP + password-reset emails go through nodemailer SMTP (`server/src/services/mail.service.js`),
+  configured via `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`/`MAIL_FROM` in `server/.env`. When SMTP is
+  **not** configured (or sending fails), the dev fallback kicks in: OTPs print to the server console as
+  `[OTP] email -> code` + returned as `devOtp` in development; reset links print as `[RESET LINK] <url>` +
+  returned as `devResetUrl`. Once SMTP works, `devOtp`/`devResetUrl` disappear automatically.
 - Client env: `client/.env.local` (`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WS_URL`), defaults to
   `http://localhost:5000/api/v1`.
 
