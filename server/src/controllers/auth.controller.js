@@ -63,7 +63,8 @@ export const requestOtp = asyncHandler(async (req, res) => {
 
   // Real email when SMTP is configured; otherwise keep the dev fallback
   const mail = await sendOtpEmail(email, otp, 10);
-  if (!mail.sent && env.NODE_ENV === "development") {
+  // Dev console keeps the code for demos/E2E even when email delivery works
+  if (env.NODE_ENV === "development") {
     console.log(`[OTP] ${email} → ${otp} (expires ${otpExpires.toISOString()})`);
   }
 

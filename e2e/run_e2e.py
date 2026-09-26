@@ -199,6 +199,27 @@ def api(method: str, path: str, token: str | None = None, **kw):
 # ----------------------------------------------------------------- phases ---
 
 
+def wait_otp_from_server_log(email: str, timeout: float = 20.0) -> str:
+    """With SMTP configured there is no on-screen dev code; development still
+    prints `[OTP] email -> code` to the server console, so parse it there."""
+    log = os.path.join(HERE, "..", "server", "dev-run.log")
+    pat = re.compile(re.escape(email) + r"[^\r\n]*?(\d{6})")
+    deadline = time.time() + timeout
+    found = False
+    while time.time() < deadline:
+        try:
+            with open(log, encoding="utf-8", errors="replace") as f:
+                hits = pat.findall(f.read())
+            if hits:
+                return hits[-1]
+            found = True
+        except FileNotFoundError:
+            pass
+        time.sleep(0.5)
+    where = log if found else f"{log} (file missing)"
+    raise AssertionError(f"no [OTP] line for {email} in {where}")
+
+
 def ph_public(c: Ctx):
     p, c.phase = c.page, "public"
 
@@ -747,8 +768,13 @@ def ph_register(c: Ctx):
         p.get_by_label("Confirm password").fill("E2ePass!123")
         p.get_by_role("button", name="Send verification code").click()
         wait_visible(p.get_by_label("OTP digit 1"), timeout=30000)
-        code_el = wait_visible(p.get_by_text(re.compile(r"Dev code:\s*\d{6}")), timeout=15000)
-        code = re.search(r"\d{6}", code_el.inner_text()).group(0)
+        try:
+            # fallback shown when SMTP is not configured
+            code_el = wait_visible(p.get_by_text(re.compile(r"Dev code:\s*\d{6}")), timeout=6000)
+            code = re.search(r"\d{6}", code_el.inner_text()).group(0)
+        except Exception:
+            # SMTP configured -> code only reaches the server console
+            code = wait_otp_from_server_log(email)
         c.state["otp"] = code
 
     with c.step("OTP boxes auto-advance while typing"):
