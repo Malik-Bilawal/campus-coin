@@ -1,64 +1,40 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   Hexagon,
   ArrowRight,
   Sparkles,
   BarChart3,
-  Wallet,
   Bot,
-  Bell,
-  Target,
-  Trophy,
   Upload,
-  Moon,
+  Trophy,
   Quote,
   CheckCircle2,
-  Users,
 } from "lucide-react";
 
-const features = [
-  {
-    icon: Wallet,
-    title: "Quick logging",
-    desc: "Income & expenses in seconds with student-friendly categories and live AI auto-tag.",
-  },
-  {
-    icon: Target,
-    title: "Budgets that bite",
-    desc: "Per-category monthly limits with in-app alerts before you overspend.",
-  },
+const compactFeatures = [
   {
     icon: Bot,
     title: "AI money coach",
-    desc: "Categorize, chat, and get monthly plain-language insights — with rule-based fallback.",
+    desc: "Category suggestions as you type, a chat widget for \"can I afford…?\", and monthly plain-language insights.",
   },
   {
     icon: BarChart3,
-    title: "Smart reports",
-    desc: "Donut breakdowns, 6-month trends, daily & weekly summaries, PDF export.",
+    title: "Reports you can act on",
+    desc: "Category donuts, 6-month trends, daily & weekly summaries, and one-click PDF export.",
   },
   {
     icon: Upload,
     title: "CSV import",
-    desc: "Bulk-import bank or e-wallet statements and sort them in one pass.",
+    desc: "Drop in a bank or bKash statement and auto-categorize the whole month in one pass.",
   },
   {
     icon: Trophy,
-    title: "Streaks & goals",
-    desc: "Log every day, hit savings goals, and celebrate with confetti moments.",
-  },
-  {
-    icon: Bell,
-    title: "Live toasts",
-    desc: "WebSocket-powered notifications that land the moment something happens.",
-  },
-  {
-    icon: Moon,
-    title: "Built for night owls",
-    desc: "Dark mode by default, glass UI, and adjustable font sizes for late-night study.",
+    title: "Streaks & savings goals",
+    desc: "Daily logging streaks, goal progress, and confetti when you actually hit the target.",
   },
 ];
 
@@ -80,33 +56,51 @@ const steps = [
   },
 ];
 
-const sitemap = [
-  { label: "Auth", children: ["Login", "Register", "Forgot / Reset"] },
-  { label: "Dashboard", children: ["Overview", "Balance", "Streak", "Live dot"] },
-  { label: "Money", children: ["Transactions", "Budgets", "Categories", "CSV import"] },
-  { label: "Insights", children: ["Reports", "AI Insights", "Tips", "Bookmarks"] },
-  { label: "Account", children: ["Profile", "Notifications", "Dark mode"] },
-  { label: "Admin", children: ["Stats", "Users", "Announcements", "Health"] },
-];
-
 const testimonials = [
   {
     quote:
       "Finally an app that speaks hostel-budget, not corporate finance. The AI tips actually matched my canteen habits.",
     name: "Ayesha R.",
     role: "3rd Year, CSE",
+    initials: "AR",
+    color: "bg-honey-500/20 text-honey-700 dark:text-honey-300",
   },
   {
     quote:
       "Budget alerts saved me mid-month. I almost blew my transport limit — got a toast and fixed it same day.",
     name: "Tanvir H.",
     role: "2nd Year, BBA",
+    initials: "TH",
+    color: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300",
   },
   {
     quote:
       "Streaks + confetti sound silly until you've logged 14 days straight and hit your savings goal.",
     name: "Nusrat J.",
     role: "Final Year, Architecture",
+    initials: "NJ",
+    color: "bg-sky-500/20 text-sky-700 dark:text-sky-300",
+  },
+];
+
+const gallery = [
+  {
+    src: "/shots/reports.png",
+    url: "campuscoin.app/reports",
+    title: "Monthly reports",
+    desc: "Category donuts, 6-month trends, and PDF export.",
+  },
+  {
+    src: "/shots/insights.png",
+    url: "campuscoin.app/insights",
+    title: "AI insights",
+    desc: "A plain-language monthly narrative with one clear next step.",
+  },
+  {
+    src: "/shots/import.png",
+    url: "campuscoin.app/transactions/import",
+    title: "CSV import",
+    desc: "Paste a statement, auto-categorize every row in bulk.",
   },
 ];
 
@@ -134,97 +128,51 @@ function Logo() {
   );
 }
 
-function MockDashboard() {
-  const bars = [42, 58, 36, 72, 48, 88, 64];
+function BrowserFrame({ src, alt, url, className = "" }) {
   return (
-    <div className="relative mx-auto w-full max-w-lg">
-      {/* glow */}
-      <div className="absolute -inset-4 rounded-3xl bg-honey-500/10 blur-3xl" aria-hidden />
+    <div
+      className={`overflow-hidden rounded-xl border border-zinc-300/70 bg-zinc-100 shadow-glass-lg dark:border-zinc-700/60 dark:bg-zinc-900 ${className}`}
+    >
+      <div className="flex items-center gap-1.5 border-b border-zinc-200/80 bg-white/80 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900">
+        <span className="h-2.5 w-2.5 rounded-full bg-rose-400/80" />
+        <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
+        <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
+        <span className="ml-2 truncate rounded-md bg-zinc-100 px-2 py-0.5 text-[10px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+          {url}
+        </span>
+      </div>
+      <Image src={src} alt={alt} width={1440} height={900} className="block w-full" />
+    </div>
+  );
+}
 
-      <motion.div
-        initial={{ opacity: 0, y: 40, rotateX: 12 }}
-        animate={{ opacity: 1, y: 0, rotateX: 0 }}
-        transition={{ duration: 0.7, ease: "easeOut", delay: 0.25 }}
-        style={{ transformPerspective: 1000 }}
-        className="relative rounded-2xl border border-honey-500/20 bg-zinc-900/90 p-5 shadow-glass-lg backdrop-blur-xl"
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-500">This month</p>
-            <p className="text-2xl font-bold text-white">
-              ৳12,450<span className="ml-2 text-xs font-medium text-emerald-400">↓ 8% vs last</span>
-            </p>
-          </div>
-          <div className="rounded-lg bg-honey-500/15 px-2.5 py-1.5 text-[10px] font-semibold text-honey-400">
-            On track
-          </div>
-        </div>
-
-        <div className="mb-4 flex h-24 items-end gap-1.5">
-          {bars.map((h, i) => (
-            <motion.div
-              key={i}
-              initial={{ height: 4 }}
-              animate={{ height: `${h}%` }}
-              transition={{ delay: 0.5 + i * 0.08, duration: 0.45, ease: "easeOut" }}
-              className="flex-1 rounded-t-md bg-gradient-to-t from-honey-600/80 to-honey-400"
-            />
+function FeatureRow({ eyebrow, title, desc, bullets, shot, alt, url, reversed = false }) {
+  return (
+    <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
+      <motion.div {...fadeUp} className={reversed ? "lg:order-2" : ""}>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-honey-600 dark:text-honey-400">
+          {eyebrow}
+        </p>
+        <h3 className="text-2xl font-bold tracking-tight sm:text-[1.75rem]">{title}</h3>
+        <p className="mt-3 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">{desc}</p>
+        <ul className="mt-5 space-y-2.5">
+          {bullets.map((b) => (
+            <li
+              key={b}
+              className="flex items-start gap-2.5 text-sm text-zinc-600 dark:text-zinc-300"
+            >
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+              {b}
+            </li>
           ))}
-        </div>
-
-        <div className="space-y-2">
-          {[
-            { label: "Food & canteen", pct: 72, color: "bg-honey-500" },
-            { label: "Transport", pct: 45, color: "bg-sky-500" },
-            { label: "Books", pct: 30, color: "bg-emerald-500" },
-          ].map((row) => (
-            <div key={row.label}>
-              <div className="mb-1 flex justify-between text-[10px] text-zinc-400">
-                <span>{row.label}</span>
-                <span>{row.pct}%</span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-zinc-800">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${row.pct}%` }}
-                  transition={{ delay: 0.8, duration: 0.7, ease: "easeOut" }}
-                  className={`h-full rounded-full ${row.color}`}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
+        </ul>
       </motion.div>
-
-      {/* floating chips */}
       <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.9, duration: 0.45 }}
-        className="absolute -left-6 top-10 hidden rounded-xl border border-white/10 bg-white/10 px-3 py-2 backdrop-blur-md sm:block dark:bg-zinc-900/80"
+        {...fadeUp}
+        transition={{ ...fadeUp.transition, delay: 0.1 }}
+        className={reversed ? "lg:order-1" : ""}
       >
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-3.5 w-3.5 text-honey-400" />
-          <div>
-            <p className="text-[9px] text-zinc-400">AI insight</p>
-            <p className="text-[11px] font-medium text-white">Cut snacks 15% → save ৳800</p>
-          </div>
-        </div>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 1.1, duration: 0.45 }}
-        className="absolute -right-4 bottom-8 hidden rounded-xl border border-white/10 bg-white/10 px-3 py-2 backdrop-blur-md sm:block dark:bg-zinc-900/80"
-      >
-        <div className="flex items-center gap-2">
-          <Trophy className="h-3.5 w-3.5 text-amber-400" />
-          <div>
-            <p className="text-[9px] text-zinc-400">Streak</p>
-            <p className="text-[11px] font-medium text-white">14 days and counting</p>
-          </div>
-        </div>
+        <BrowserFrame src={shot} alt={alt} url={url} />
       </motion.div>
     </div>
   );
@@ -248,7 +196,7 @@ export default function LandingPage() {
               AI coach
             </a>
             <a href="#sitemap" className="transition hover:text-honey-600">
-              Sitemap
+              Screens
             </a>
           </div>
           <div className="flex shrink-0 items-center gap-3">
@@ -265,7 +213,7 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -right-32 -top-32 h-[30rem] w-[30rem] rounded-full bg-honey-500/12 blur-[110px]" />
+          <div className="absolute -right-32 -top-32 h-[30rem] w-[30rem] rounded-full bg-honey-500/10 blur-[110px]" />
           <div
             className="absolute inset-0 opacity-[0.05] dark:opacity-[0.07]"
             style={{
@@ -276,7 +224,7 @@ export default function LandingPage() {
           />
         </div>
 
-        <div className="mx-auto grid max-w-6xl items-center gap-14 px-6 pb-24 pt-16 lg:grid-cols-2 lg:gap-10 lg:pt-24">
+        <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-20 pt-14 lg:grid-cols-2 lg:gap-10 lg:pt-20">
           <div className="text-center lg:text-left">
             <motion.span
               initial={{ opacity: 0, y: 12 }}
@@ -285,14 +233,14 @@ export default function LandingPage() {
               className="mb-6 inline-flex items-center gap-2 rounded-full border border-honey-500/35 bg-honey-500/12 px-4 py-1.5 text-xs font-semibold tracking-wide text-honey-700 dark:text-honey-300"
             >
               <Sparkles className="h-3.5 w-3.5" />
-              New · AI money coach built in
+              Free forever for students
             </motion.span>
 
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.08, duration: 0.55 }}
-              className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-[3.5rem] lg:leading-[1.06]"
+              className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-[3.4rem] lg:leading-[1.07]"
             >
               Take control of your{" "}
               <span className="text-honey-600 dark:text-honey-400">student money</span>
@@ -329,10 +277,10 @@ export default function LandingPage() {
               className="mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-zinc-400 lg:justify-start"
             >
               <span className="inline-flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Free forever for students
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> No card required
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Setup takes under a minute
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Setup in under a minute
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Works on any device
@@ -340,39 +288,109 @@ export default function LandingPage() {
             </motion.div>
           </div>
 
-          <MockDashboard />
+          <motion.div
+            initial={{ opacity: 0, y: 40, rotateX: 8 }}
+            animate={{ opacity: 1, y: 0, rotateX: 0 }}
+            transition={{ duration: 0.7, ease: "easeOut", delay: 0.25 }}
+            style={{ transformPerspective: 1000 }}
+            className="relative mx-auto w-full max-w-xl"
+          >
+            <div
+              className="absolute -inset-4 rounded-3xl bg-honey-500/10 blur-3xl"
+              aria-hidden
+            />
+            <BrowserFrame
+              src="/shots/dashboard.png"
+              alt="Campus Coin dashboard showing net balance, budgets and recent transactions"
+              url="campuscoin.app/dashboard"
+              className="relative"
+            />
+          </motion.div>
+        </div>
+
+        {/* Product facts strip */}
+        <div className="border-y border-zinc-200 bg-white/60 dark:border-zinc-800 dark:bg-zinc-900/40">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-2.5 px-6 py-4 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            <span>BDT-first tracking</span>
+            <span className="hidden text-zinc-300 sm:block dark:text-zinc-700">•</span>
+            <span>Realtime budget alerts</span>
+            <span className="hidden text-zinc-300 sm:block dark:text-zinc-700">•</span>
+            <span>PDF report exports</span>
+            <span className="hidden text-zinc-300 sm:block dark:text-zinc-700">•</span>
+            <span>100% free for students</span>
+          </div>
         </div>
       </section>
 
       {/* Features */}
       <section id="features" className="mx-auto max-w-6xl scroll-mt-20 px-6 py-20">
-        <motion.div {...fadeUp} className="mb-10 text-center">
+        <motion.div {...fadeUp} className="mb-12 max-w-2xl">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-honey-600 dark:text-honey-400">
             Features
           </p>
-          <h2 className="text-3xl font-bold tracking-tight">Everything a student budget needs</h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm text-zinc-500 dark:text-zinc-400">
-            Full CRUD, real-time alerts, AI assist, and admin tooling — all in one clean workspace.
+          <h2 className="text-3xl font-bold tracking-tight">
+            Built for the way students actually spend
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+            Everything you need to track, plan, and understand your money — no finance degree
+            required.
           </p>
         </motion.div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {features.map((f, i) => (
-            <motion.div
-              key={f.title}
-              {...fadeUp}
-              transition={{ ...fadeUp.transition, delay: (i % 4) * 0.07 }}
-              className="glass-card-hover group p-5"
-            >
-              <div className="mb-3 inline-flex rounded-xl bg-gradient-to-br from-honey-500/20 to-honey-400/5 p-3 transition-transform group-hover:scale-105">
-                <f.icon className="h-5 w-5 text-honey-600 dark:text-honey-400" />
-              </div>
-              <h3 className="text-sm font-semibold">{f.title}</h3>
-              <p className="mt-1.5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-                {f.desc}
-              </p>
-            </motion.div>
-          ))}
+        <div className="space-y-16">
+          <motion.div {...fadeUp}>
+            <FeatureRow
+              eyebrow="Transactions"
+              title="Log money in seconds"
+              desc="Income or expense in two taps. Pick a category — AI suggests one as you type — add a note, and you're done. Everything stays editable and searchable."
+              bullets={[
+                "AI category suggestions while you type",
+                "Search, filter, edit and delete anytime",
+                "Recurring-friendly manual entry",
+              ]}
+              shot="/shots/transactions.png"
+              alt="Transactions list with search and filters"
+              url="campuscoin.app/transactions"
+            />
+          </motion.div>
+
+          <motion.div {...fadeUp}>
+            <FeatureRow
+              reversed
+              eyebrow="Budgets"
+              title="Budgets that warn you before the money's gone"
+              desc="Set a monthly limit per category. Campus Coin tracks as you spend and pushes a live alert the moment you're close — so the correction happens mid-month, not after."
+              bullets={[
+                "Per-category monthly limits",
+                "Live alerts over WebSocket, the second you cross the line",
+                "Budget vs actual on every dashboard",
+              ]}
+              shot="/shots/budgets.png"
+              alt="Budget goals with progress bars"
+              url="campuscoin.app/budgets"
+            />
+          </motion.div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {compactFeatures.map((f, i) => (
+              <motion.div
+                key={f.title}
+                {...fadeUp}
+                transition={{ ...fadeUp.transition, delay: (i % 2) * 0.08 }}
+                className="glass-card-hover group flex gap-4 p-5"
+              >
+                <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-honey-500/20 to-honey-400/5 transition-transform group-hover:scale-105">
+                  <f.icon className="h-5 w-5 text-honey-600 dark:text-honey-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold">{f.title}</h3>
+                  <p className="mt-1.5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                    {f.desc}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -424,15 +442,16 @@ export default function LandingPage() {
               An AI that explains money like a friend
             </h2>
             <p className="mt-4 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
-              Groq primary with OpenRouter fallback — and every feature degrades to smart local
-              rules, so the coach keeps working even when an AI provider is down.
+              Ask &ldquo;can I afford…?&rdquo; and get an answer grounded in your actual numbers.
+              If the AI provider ever has a bad day, smart local rules keep the insights flowing —
+              the coach never goes dark.
             </p>
             <ul className="mt-6 space-y-3">
               {[
                 "Live category suggestions as you type a transaction",
                 "Monthly insights: top category, burn rate, one concrete action",
                 "Chat widget for \"can I afford…?\" style questions",
-                "Batch-categorize imported CSV rows in one call",
+                "Auto-categorize imported statements in bulk",
               ].map((t) => (
                 <li key={t} className="flex items-start gap-2.5 text-sm text-zinc-600 dark:text-zinc-300">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
@@ -454,7 +473,7 @@ export default function LandingPage() {
             <div className="relative space-y-3">
               <div className="flex gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-200 dark:bg-zinc-800">
-                  <Users className="h-4 w-4 text-zinc-500" />
+                  <Quote className="h-4 w-4 text-zinc-500" />
                 </div>
                 <div className="rounded-2xl rounded-tl-sm bg-zinc-100 px-4 py-2.5 text-sm text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
                   Can I afford a new phone this month?
@@ -495,9 +514,18 @@ export default function LandingPage() {
                 <blockquote className="flex-1 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
                   &ldquo;{t.quote}&rdquo;
                 </blockquote>
-                <figcaption className="mt-4 text-xs">
-                  <span className="font-semibold text-zinc-800 dark:text-zinc-100">{t.name}</span>
-                  <span className="text-zinc-400"> · {t.role}</span>
+                <figcaption className="mt-5 flex items-center gap-3">
+                  <span
+                    className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold ${t.color}`}
+                  >
+                    {t.initials}
+                  </span>
+                  <span className="text-xs">
+                    <span className="block font-semibold text-zinc-800 dark:text-zinc-100">
+                      {t.name}
+                    </span>
+                    <span className="text-zinc-400">{t.role}</span>
+                  </span>
                 </figcaption>
               </motion.figure>
             ))}
@@ -505,56 +533,37 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Visual sitemap */}
+      {/* Screens gallery */}
       <section id="sitemap" className="mx-auto max-w-6xl scroll-mt-20 px-6 py-20">
-        <motion.div {...fadeUp} className="mb-8 text-center">
+        <motion.div {...fadeUp} className="mb-10 text-center">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-honey-600 dark:text-honey-400">
             Product tour
           </p>
-          <h2 className="text-3xl font-bold tracking-tight">Explore the app</h2>
-          <p className="mt-2 text-sm text-zinc-500">Visual sitemap of every screen</p>
+          <h2 className="text-3xl font-bold tracking-tight">Real screens from the working app</h2>
+          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+            Every view below is the live product — no mockups.
+          </p>
         </motion.div>
 
-        <motion.div {...fadeUp} className="glass-card relative overflow-hidden p-6 sm:p-8">
-          <div className="mb-6 flex justify-center">
-            <div className="rounded-xl bg-gradient-to-r from-honey-500 to-honey-400 px-5 py-2.5 text-sm font-bold text-zinc-900 shadow-honey">
-              Campus Coin
-            </div>
-          </div>
-          <div className="mb-4 flex justify-center">
-            <div className="h-4 w-px bg-honey-500/40" />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            {sitemap.map((node, i) => (
-              <motion.div
-                key={node.label}
-                initial={{ opacity: 0, y: 12 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.05, duration: 0.4 }}
-                className="rounded-xl border border-honey-500/20 bg-white/50 p-4 dark:bg-zinc-900/50"
-              >
-                <div className="mb-3 flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-honey-500" />
-                  <p className="text-xs font-bold uppercase tracking-wider text-honey-600 dark:text-honey-400">
-                    {node.label}
-                  </p>
-                </div>
-                <ul className="space-y-1.5">
-                  {node.children.map((c) => (
-                    <li
-                      key={c}
-                      className="rounded-md bg-zinc-100/80 px-2.5 py-1.5 text-xs text-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-300"
-                    >
-                      {c}
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
+        <div className="grid gap-5 md:grid-cols-3">
+          {gallery.map((g, i) => (
+            <motion.div
+              key={g.title}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.08, duration: 0.45 }}
+            >
+              <BrowserFrame src={g.src} alt={g.title} url={g.url} />
+              <div className="mt-3 px-1">
+                <p className="text-sm font-semibold">{g.title}</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                  {g.desc}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
       </section>
 
       {/* CTA */}
@@ -582,12 +591,78 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-zinc-200 py-10 dark:border-zinc-800">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 sm:flex-row">
-          <Logo />
-          <p className="text-center text-xs text-zinc-400">
-            © {new Date().getFullYear()} Campus Coin · Built for campus financial literacy
-          </p>
+      {/* Footer */}
+      <footer className="border-t border-zinc-200 dark:border-zinc-800">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-14 sm:grid-cols-3">
+          <div className="sm:col-span-1">
+            <Logo />
+            <p className="mt-4 max-w-xs text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+              The student budget tracker built around hostel budgets, canteen runs, and
+              scholarship season — not corporate finance.
+            </p>
+          </div>
+          <nav aria-label="Product">
+            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
+              Product
+            </p>
+            <ul className="space-y-2 text-sm text-zinc-500 dark:text-zinc-400">
+              <li>
+                <a href="#features" className="transition hover:text-honey-600">
+                  Features
+                </a>
+              </li>
+              <li>
+                <a href="#how" className="transition hover:text-honey-600">
+                  How it works
+                </a>
+              </li>
+              <li>
+                <a href="#ai" className="transition hover:text-honey-600">
+                  AI coach
+                </a>
+              </li>
+              <li>
+                <a href="#sitemap" className="transition hover:text-honey-600">
+                  Screens
+                </a>
+              </li>
+            </ul>
+          </nav>
+          <nav aria-label="Account">
+            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
+              Account
+            </p>
+            <ul className="space-y-2 text-sm text-zinc-500 dark:text-zinc-400">
+              <li>
+                <Link href="/login" className="transition hover:text-honey-600">
+                  Sign in
+                </Link>
+              </li>
+              <li>
+                <Link href="/register" className="transition hover:text-honey-600">
+                  Create account
+                </Link>
+              </li>
+              <li>
+                <Link href="/forgot-password" className="transition hover:text-honey-600">
+                  Forgot password
+                </Link>
+              </li>
+              <li>
+                <Link href="/admin-login" className="transition hover:text-honey-600">
+                  Admin sign in
+                </Link>
+              </li>
+            </ul>
+          </nav>
+        </div>
+        <div className="border-t border-zinc-200 dark:border-zinc-800">
+          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-6 py-5 text-xs text-zinc-400 sm:flex-row">
+            <p>
+              © {new Date().getFullYear()} Campus Coin · Built for campus financial literacy
+            </p>
+            <p>No credit card · Free for students · BDT ready</p>
+          </div>
         </div>
       </footer>
     </div>

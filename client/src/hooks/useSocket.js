@@ -6,7 +6,9 @@ import { useAuthStore } from "@/store/auth";
 import { useUIStore } from "@/store/ui";
 import { useNotificationStore } from "@/store/notifications";
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:5000";
+const WS_URL =
+  process.env.NEXT_PUBLIC_WS_URL ||
+  (typeof window !== "undefined" ? window.location.origin : "http://localhost:5000");
 
 let socket = null;
 

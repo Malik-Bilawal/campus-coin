@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Hexagon, Sparkles, TrendingUp, Wallet, BarChart3, Shield } from "lucide-react";
+import { Hexagon, Sparkles, Wallet, BarChart3, Shield } from "lucide-react";
 
 const brandFeatures = [
   { icon: Wallet, text: "Log expenses in seconds" },
@@ -30,19 +30,6 @@ function BrandLogo({ size = "md" }) {
   );
 }
 
-function FloatingCard({ className, delay = 0, children }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.5 }}
-      className={`absolute rounded-2xl border border-white/10 bg-white/10 p-4 shadow-glass backdrop-blur-xl ${className}`}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
 export function AuthShell({ children, title, subtitle, footer, showBack = true, wide = false, maxWidth = "max-w-md" }) {
   const width = wide ? "max-w-lg" : maxWidth;
   return (
@@ -67,12 +54,12 @@ export function AuthShell({ children, title, subtitle, footer, showBack = true, 
             <BrandLogo />
           </div>
 
-          <div className="relative z-10 max-w-lg">
+          <div className="relative z-10 mx-auto w-full max-w-md py-8">
             <motion.span
               initial={{ opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.45 }}
-              className="mb-6 inline-flex items-center gap-2 rounded-full border border-honey-500/30 bg-honey-500/10 px-4 py-1.5 text-xs font-semibold tracking-wide text-honey-300"
+              className="mb-5 inline-flex items-center gap-2 rounded-full border border-honey-500/30 bg-honey-500/10 px-3.5 py-1.5 text-xs font-semibold tracking-wide text-honey-300"
             >
               <Sparkles className="h-3.5 w-3.5" />
               Free forever for students
@@ -81,70 +68,52 @@ export function AuthShell({ children, title, subtitle, footer, showBack = true, 
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.08, duration: 0.5 }}
-              className="text-3xl font-extrabold leading-[1.15] tracking-tight xl:text-[2.6rem]"
+              className="text-[1.9rem] font-extrabold leading-[1.18] tracking-tight xl:text-[2.3rem]"
             >
               Master campus money, one{" "}
-              <span className="text-honey-400">smart habit</span>{" "}
-              at a time.
+              <span className="text-honey-400">smart habit</span> at a time.
             </motion.h2>
             <motion.p
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.16, duration: 0.5 }}
-              className="mt-5 max-w-md text-sm leading-relaxed text-zinc-400 sm:text-base"
+              className="mt-4 text-sm leading-relaxed text-zinc-400 sm:text-[0.95rem]"
             >
               Built for hostel life, canteen runs, and scholarship season. Track, budget, and get
               plain-language saving tips powered by AI.
             </motion.p>
 
-            <div className="mt-8 grid grid-cols-2 gap-3">
+            <ul className="mt-7 space-y-3">
               {brandFeatures.map((f, i) => (
-                <motion.div
+                <motion.li
                   key={f.text}
-                  initial={{ opacity: 0, y: 12 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.24 + i * 0.07, duration: 0.4 }}
-                  className="flex items-start gap-2.5 rounded-2xl border border-white/10 bg-white/[0.06] p-3.5 backdrop-blur-sm transition hover:border-honey-500/30 hover:bg-white/[0.09]"
+                  className="flex items-center gap-3 text-sm text-zinc-300"
                 >
-                  <div className="mt-0.5 rounded-xl bg-gradient-to-br from-honey-500/25 to-honey-500/5 p-2">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-honey-500/20 bg-honey-500/10">
                     <f.icon className="h-4 w-4 text-honey-400" />
-                  </div>
-                  <p className="text-xs leading-snug text-zinc-300">{f.text}</p>
-                </motion.div>
+                  </span>
+                  {f.text}
+                </motion.li>
               ))}
-            </div>
-          </div>
+            </ul>
 
-          <div className="pointer-events-none absolute right-8 top-1/2 hidden h-56 w-64 -translate-y-1/2 xl:block">
-            <FloatingCard className="right-0 top-4 w-52" delay={0.4}>
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] uppercase tracking-wider text-zinc-400">This month</p>
-                <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
-              </div>
-              <p className="mt-1.5 text-xl font-bold text-white">৳12,450</p>
-              <div className="mt-3 flex h-12 items-end gap-1">
-                {[40, 55, 35, 70, 50, 85, 65].map((h, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ height: 4 }}
-                    animate={{ height: `${h}%` }}
-                    transition={{ delay: 0.55 + i * 0.06, duration: 0.4 }}
-                    className="w-full rounded-t-sm bg-gradient-to-t from-honey-600 to-honey-400"
-                  />
-                ))}
-              </div>
-            </FloatingCard>
-            <FloatingCard className="bottom-8 left-0 w-48" delay={0.55}>
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/20">
-                  <Sparkles className="h-4 w-4 text-emerald-400" />
-                </div>
-                <div>
-                  <p className="text-[10px] text-zinc-400">AI insight</p>
-                  <p className="text-xs font-medium text-white">Cut snacks 15% → save ৳800</p>
-                </div>
-              </div>
-            </FloatingCard>
+            <motion.figure
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.55, duration: 0.45 }}
+              className="mt-8 border-l-2 border-honey-500/60 pl-4"
+            >
+              <blockquote className="text-sm italic leading-relaxed text-zinc-400">
+                &ldquo;The budget alerts caught me overspending on food before the month even
+                ended — I fixed it the same day.&rdquo;
+              </blockquote>
+              <figcaption className="mt-2 text-xs text-zinc-500">
+                Tanvir, 2nd year BBA · using Campus Coin this semester
+              </figcaption>
+            </motion.figure>
           </div>
 
           <p className="relative z-10 text-xs text-zinc-600">
