@@ -12,6 +12,7 @@ class ApiClient {
       credentials: "include",
       headers: {
         ...(body ? { "Content-Type": "application/json" } : {}),
+        "ngrok-skip-browser-warning": "1",
         ...headers,
       },
       body: body ? JSON.stringify(body) : undefined,
@@ -50,6 +51,7 @@ class ApiClient {
       const res = await fetch(`${this.baseUrl}/auth/refresh`, {
         method: "POST",
         credentials: "include",
+        headers: { "ngrok-skip-browser-warning": "1" },
       });
       if (!res.ok) return false;
       try {

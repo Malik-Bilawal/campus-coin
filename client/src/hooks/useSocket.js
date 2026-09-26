@@ -41,6 +41,7 @@ export function useSocket() {
         auth: { token: "" },
         withCredentials: true,
         autoConnect: false,
+        extraHeaders: { "ngrok-skip-browser-warning": "1" },
       });
     }
 
