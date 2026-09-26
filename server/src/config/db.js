@@ -33,7 +33,9 @@ async function startMemoryServer() {
 export async function connectDB() {
   mongoose.set("strictQuery", true);
 
-  const atlasFirst = env.TRY_ATLAS_FIRST === "true";
+  // In production there is no local mongod — always try Atlas first.
+  const atlasFirst =
+    env.NODE_ENV === "production" || env.TRY_ATLAS_FIRST === "true";
   const localUri = env.MONGODB_LOCAL_URI || "mongodb://127.0.0.1:27017/campuscoin";
   const atlasTimeout = env.MONGODB_TIMEOUT_MS;
   const localTimeout = 4000;
@@ -62,8 +64,12 @@ export async function connectDB() {
     }
   }
 
-  if (env.NODE_ENV === "production" && env.FORCE_ATLAS === "true") {
-    console.error("❌ FORCE_ATLAS=true — no fallback allowed");
+  if (env.NODE_ENV === "production" || env.FORCE_ATLAS === "true") {
+    console.error(
+      env.NODE_ENV === "production"
+        ? "❌ MongoDB unavailable in production — refusing in-memory fallback"
+        : "❌ FORCE_ATLAS=true — no fallback allowed"
+    );
     process.exit(1);
   }
 
