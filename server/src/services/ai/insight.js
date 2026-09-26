@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { Transaction } from "../../models/Transaction.js";
 import { Budget } from "../../models/Budget.js";
 import { Insight } from "../../models/Insight.js";
-import { llmChat, parseJsonLoose } from "./provider.js";
+import { llmChat, parseJsonLoose, stripMarkdown } from "./provider.js";
 
 function monthBounds(key) {
   const [y, m] = key.split("-").map(Number);
@@ -102,7 +102,7 @@ const SYSTEM = `You are BudgetBee, a friendly student finance assistant for Camp
 Write a short plain-language monthly spending insight (3-5 sentences).
 Highlight patterns, flag big increases, and give ONE simple actionable tip.
 Tone: warm, encouraging, not judgmental. Currency amounts as numbers only.
-No markdown headings. No disclaimer boilerplate.`;
+Plain text only — no markdown, no **, no headings, no disclaimer boilerplate.`;
 
 /** One concrete, stats-derived action the student can take next month. */
 function deriveAdvice(stats) {
@@ -121,6 +121,19 @@ function deriveAdvice(stats) {
     return `Aim to save at least 20% of income — you're at ${saveRate}%. Small cuts in ${top.name} can close the gap.`;
   }
   return `Solid month with ${saveRate}% saved. Keep ${top.name} steady and move the surplus into your savings goal.`;
+}
+
+/** Stats-derived narrative used whenever the LLM can't produce one. */
+function ruleNarrative(stats, monthKey) {
+  if (stats.byCategory.length === 0) {
+    return `No expenses logged in ${monthKey}. Add transactions to unlock your monthly insight.`;
+  }
+  const top = stats.byCategory[0];
+  return `In ${monthKey} you spent ${stats.expense.toFixed(0)} and earned ${stats.income.toFixed(0)} ${
+    stats.saved >= 0 ? `, saving ${stats.saved.toFixed(0)}` : `, going over by ${Math.abs(stats.saved).toFixed(0)}`
+  }. Top category: ${top?.name || "n/a"} at ${top?.total?.toFixed(0) || 0}.${
+    stats.flags[0] ? ` Note: ${stats.flags[0]}.` : ""
+  } Try capping that category next week.`;
 }
 
 export async function generateInsight(userId, monthKey, force = false) {
@@ -150,18 +163,11 @@ export async function generateInsight(userId, monthKey, force = false) {
       ],
       { temperature: 0.5, maxTokens: 400, timeoutMs: 12000 }
     );
-    narrative = content.trim();
+    narrative = stripMarkdown(content.trim());
+    if (!narrative) throw new Error("empty LLM reply");
     provider = p;
   } catch {
-    const top = stats.byCategory[0];
-    narrative =
-      stats.byCategory.length === 0
-        ? `No expenses logged in ${monthKey}. Add transactions to unlock your monthly insight.`
-        : `In ${monthKey} you spent ${stats.expense.toFixed(0)} and earned ${stats.income.toFixed(0)} ${
-            stats.saved >= 0 ? `, saving ${stats.saved.toFixed(0)}` : `, going over by ${Math.abs(stats.saved).toFixed(0)}`
-          }. Top category: ${top?.name || "n/a"} at ${top?.total?.toFixed(0) || 0}.${
-            stats.flags[0] ? ` Note: ${stats.flags[0]}.` : ""
-          } Try capping that category next week.`;
+    narrative = ruleNarrative(stats, monthKey);
     provider = "rules";
   }
 

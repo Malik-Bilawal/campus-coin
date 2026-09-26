@@ -19,6 +19,15 @@ const CHIPS = [
   "Am I on track for my goal?",
 ];
 
+function sourceLabel(s) {
+  if (!s) return "";
+  if (s.startsWith("ai")) return "BudgetBee · AI";
+  if (s === "faq") return "Quick answer";
+  if (s === "smalltalk") return "BudgetBee";
+  if (s === "rules") return "BudgetBee · smart rules";
+  return ""; // fallback and anything unknown stay hidden
+}
+
 function storageKey(userId) {
   return `cc-chat-${userId}`;
 }
@@ -87,14 +96,20 @@ export function ChatWidget() {
         message: text,
         history: messages.slice(-6).map((m) => ({ role: m.role, content: m.content })),
       });
-      setMessages([
-        ...next,
-        { role: "assistant", content: res.data.reply, source: res.data.source },
-      ]);
+      const reply =
+        typeof res.data?.reply === "string" && res.data.reply.trim()
+          ? res.data.reply
+          : "I'm here — try rephrasing that? 💬";
+      setMessages([...next, { role: "assistant", content: reply, source: res.data?.source }]);
     } catch (err) {
       setMessages([
         ...next,
-        { role: "assistant", content: err.message || "Something went wrong — try again." },
+        {
+          role: "assistant",
+          content:
+            err?.message ||
+            "Hmm, that didn't go through — give it another try in a moment. 💬",
+        },
       ]);
     } finally {
       setLoading(false);
@@ -174,8 +189,10 @@ export function ChatWidget() {
                     }
                   >
                     <p className="whitespace-pre-wrap">{m.content}</p>
-                    {m.source && (
-                      <p className="mt-1 text-[9px] uppercase tracking-wider opacity-50">{m.source}</p>
+                    {sourceLabel(m.source) && (
+                      <p className="mt-1 text-[9px] uppercase tracking-wider opacity-50">
+                        {sourceLabel(m.source)}
+                      </p>
                     )}
                   </div>
                 </motion.div>
@@ -216,6 +233,7 @@ export function ChatWidget() {
                 placeholder="Should I buy… / How much left today?"
                 className="input-field flex-1"
                 disabled={loading}
+                maxLength={500}
               />
               <button
                 type="submit"

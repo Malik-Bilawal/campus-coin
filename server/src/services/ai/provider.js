@@ -82,6 +82,22 @@ export function parseJsonLoose(text) {
   }
 }
 
+/**
+ * Chat bubbles and insight cards render plain text — strip anything markdown-ish
+ * so users never see raw **, #, ` or link syntax.
+ */
+export function stripMarkdown(text) {
+  if (!text) return text;
+  return String(text)
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // links -> label
+    .replace(/`{1,3}([^`]+)`{1,3}/g, "$1") // code
+    .replace(/\*\*(.+?)\*\*/g, "$1") // bold
+    .replace(/__(.+?)__/g, "$1") // bold
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "") // headings
+    .replace(/^\s{0,3}[-*+]\s+/gm, "• ") // list dashes -> bullet
+    .replace(/^\s{0,3}\d+\.\s+/gm, "• "); // numbered -> bullet
+}
+
 export function aiStatus() {
   return {
     groq: !!env.GROQ_API_KEY,

@@ -1,5 +1,5 @@
 import { buildMonthStats } from "./insight.js";
-import { llmChat } from "./provider.js";
+import { llmChat, stripMarkdown } from "./provider.js";
 import { User } from "../../models/User.js";
 import {
   buildFinanceContext,
@@ -67,6 +67,26 @@ function matchFaq(message) {
     : null;
 }
 
+function smalltalkReply(message) {
+  const m = String(message).trim().toLowerCase();
+  if (/^(thanks|thank you|thankyou|ty|cheers|jazak|shukriya)/.test(m)) {
+    return "Anytime 🐝 Small daily checks keep big surprises away — come back whenever.";
+  }
+  if (/^(bye|goodbye|see ya|good night|gn)/.test(m)) {
+    return "See you! Log today's spending to keep your streak alive 💪";
+  }
+  if (/^how (are|r) (you|u)/.test(m)) {
+    return "Running smooth and buzzing 🐝 — more importantly, how's your budget this month? Ask me anything about your spending.";
+  }
+  return "Hey! I'm BudgetBee 🐝 — I advise on purchases, budgets, spending and goals using your real numbers. Try:\n• Should I buy a phone for 25000 this month?\n• How much can I spend today?\n• Where did my money go?\n• Am I on track for my savings goal?";
+}
+
+function matchSmalltalk(message) {
+  const re =
+    /^(?:hi|hii+|hello|hey|yo|sup|hola|salam|asalam(?:ualaikum)?|assalamualaikum|good\s*(?:morning|afternoon|evening)|how\s*(?:are|r)\s*(?:you|u)|thanks?|thank\s*you|thankyou|ty|cheers|shukriya|jazakallah|bye+|goodbye|see\s*ya|good\s*night|gn)[.!?\s]*$/i;
+  return re.test(String(message).trim()) ? smalltalkReply(message) : null;
+}
+
 function compactCtx(ctx) {
   return {
     today: ctx.today,
@@ -105,12 +125,11 @@ Rules:
 - For purchase questions ("should I buy X"): give a clear verdict first line: Yes / Yes with a check / Wait / Not this month / No — too tight.
 - Then 2-4 short bullets: remaining money, daily burn / days left, impact on savings goal, and one concrete alternative (delay, EMI, sale, cut a category).
 - For spending/budget/goal questions: answer with their actual numbers and one actionable next step.
-- Max ~120 words. No markdown headers. No disclaimer essays. Advisory only.
+- Max ~120 words. Plain text only — no markdown, no **, no headers, no code. Use "•" for bullets. No disclaimer essays. Advisory only.
 - If the message is feature help (how to use the app), answer briefly without inventing stats.
 - If amount is missing for a purchase, ask for the price AND still show their current safe-to-spend.`;
 
 async function personalAdvisor(userId, message, history, intents) {
-  const ctx = await buildFinanceContext(userId);
   const amount = extractAmount(message);
   const isFinance =
     intents.length > 0 ||
@@ -120,49 +139,61 @@ async function personalAdvisor(userId, message, history, intents) {
 
   if (!isFinance) return null;
 
-  const rule =
-    intents.includes("purchase") && amount != null
-      ? rulePurchaseAdvice(ctx, amount, message)
-      : intents.includes("purchase")
-        ? rulePurchaseAdvice(ctx, null, message)
-        : intents.includes("forecast")
-          ? { verdict: "Forecast", body: ruleForecast(ctx), source: "rules" }
-          : intents.some((i) => ["spending", "budget", "goal", "advice"].includes(i))
-            ? { verdict: "", body: ruleSpendingAnswer(ctx), source: "rules" }
-            : null;
-
+  // Never let a context/DB hiccup fail the whole chat — degrade gracefully.
   try {
-    const { content, provider } = await llmChat(
-      [
-        { role: "system", content: ADVISOR_SYSTEM },
-        {
-          role: "user",
-          content: `Financial context JSON:\n${JSON.stringify(compactCtx(ctx))}\n\nDetected intents: ${
-            intents.join(", ") || "general"
-          }\nExtracted purchase amount: ${amount ?? "n/a"}\n\nQuestion: ${message}`,
-        },
-      ],
-      {
-        temperature: 0.35,
-        maxTokens: 450,
-        timeoutMs: 12000,
-      }
-    );
+    const ctx = await buildFinanceContext(userId);
 
-    let reply = content.trim();
-    if (intents.includes("purchase") && amount != null && !/^(yes|wait|no)/i.test(reply)) {
-      const r = rulePurchaseAdvice(ctx, amount, message);
-      if (r.verdict && r.verdict !== "Need price") {
-        reply = `${r.verdict}\n${reply}`;
+    const rule =
+      intents.includes("purchase") && amount != null
+        ? rulePurchaseAdvice(ctx, amount, message)
+        : intents.includes("purchase")
+          ? rulePurchaseAdvice(ctx, null, message)
+          : intents.includes("forecast")
+            ? { verdict: "Forecast", body: ruleForecast(ctx), source: "rules" }
+            : intents.some((i) => ["spending", "budget", "goal", "advice"].includes(i))
+              ? { verdict: "", body: ruleSpendingAnswer(ctx), source: "rules" }
+              : null;
+
+    try {
+      const { content, provider } = await llmChat(
+        [
+          { role: "system", content: ADVISOR_SYSTEM },
+          {
+            role: "user",
+            content: `Financial context JSON:\n${JSON.stringify(compactCtx(ctx))}\n\nDetected intents: ${
+              intents.join(", ") || "general"
+            }\nExtracted purchase amount: ${amount ?? "n/a"}\n\nQuestion: ${message}`,
+          },
+        ],
+        {
+          temperature: 0.35,
+          maxTokens: 450,
+          timeoutMs: 12000,
+        }
+      );
+
+      let reply = stripMarkdown(content.trim());
+      if (!reply) throw new Error("empty LLM reply");
+      if (
+        intents.includes("purchase") &&
+        amount != null &&
+        !/^(yes|wait|no|not |hold|skip|maybe|don'?t|save|delay|go for)/i.test(reply)
+      ) {
+        const r = rulePurchaseAdvice(ctx, amount, message);
+        if (r.verdict && r.verdict !== "Need price") {
+          reply = `${r.verdict}\n${reply}`;
+        }
       }
+      return { reply, source: `ai-advisor:${provider}` };
+    } catch {
+      if (rule) return { reply: rule.body, source: rule.source };
+      return {
+        reply: ruleSpendingAnswer(ctx),
+        source: "rules",
+      };
     }
-    return { reply, source: `ai-advisor:${provider}` };
   } catch {
-    if (rule) return { reply: rule.body, source: rule.source };
-    return {
-      reply: ruleSpendingAnswer(ctx),
-      source: "rules",
-    };
+    return null;
   }
 }
 
@@ -175,6 +206,9 @@ export async function aiChat(userId, message, history = []) {
   if (personal) {
     return { reply: personal.reply, source: personal.source };
   }
+
+  const talk = matchSmalltalk(message);
+  if (talk) return { reply: talk, source: "smalltalk" };
 
   const faq = matchFaq(message);
   if (faq) return { reply: faq, source: "faq" };
@@ -189,7 +223,7 @@ export async function aiChat(userId, message, history = []) {
       {
         role: "system",
         content:
-          "You are BudgetBee inside Campus Coin, a student budget app. Answer briefly (1-3 sentences) using the light stats only if money-related. Advisory only. If asked about unbuilt features, say so honestly.",
+          "You are BudgetBee inside Campus Coin, a student budget app. Answer briefly (1-3 sentences) in plain text — no markdown, no ** — using the light stats only if money-related. Advisory only. If asked about unbuilt features, say so honestly.",
       },
       ...history.slice(-6).map((h) => ({
         role: h.role === "assistant" ? "assistant" : "user",
@@ -212,7 +246,9 @@ export async function aiChat(userId, message, history = []) {
       maxTokens: 300,
       timeoutMs: 10000,
     });
-    return { reply: content.trim(), source: `ai:${provider}` };
+    const reply = stripMarkdown(content.trim());
+    if (!reply) throw new Error("empty LLM reply");
+    return { reply, source: `ai:${provider}` };
   } catch {
     return {
       reply:

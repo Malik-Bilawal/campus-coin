@@ -33,7 +33,7 @@ export function ruleCategorize(note, type = "expense") {
 const SYSTEM = `You are a student expense categorizer for Campus Coin.
 Return ONLY JSON: {"category": string, "confidence": number 0-1, "reason": string}.
 Income categories: Allowance, Part-time Job, Scholarship, Gift, Other Income.
-Expense categories: Food, Transport, Hostel/Rent, Academies, Subscriptions, Entertainment, Miscellaneous.
+Expense categories: Food, Transport, Hostel/Rent, Academics, Subscriptions, Entertainment, Miscellaneous.
 Prefer exact names from the lists. Be conservative with confidence.`;
 
 function tokenize(note) {
@@ -140,13 +140,26 @@ export async function aiCategorize(note, type = "expense", availableNames = [], 
       const match = availableNames.find(
         (n) => n.toLowerCase() === String(parsed.category).toLowerCase()
       );
-      return {
-        name: match || parsed.category,
-        confidence: Math.min(1, Math.max(0, Number(parsed.confidence) || 0.7)),
-        reason: parsed.reason || "",
-        source: provider,
-        aiSuggested: true,
-      };
+      if (match) {
+        return {
+          name: match,
+          confidence: Math.min(1, Math.max(0, Number(parsed.confidence) || 0.7)),
+          reason: parsed.reason || "",
+          source: provider,
+          aiSuggested: true,
+        };
+      }
+      // LLM invented a name outside the user's list — trust local rules instead
+      // of offering a category that doesn't exist in the dropdown.
+      if (!availableNames.length) {
+        return {
+          name: parsed.category,
+          confidence: Math.min(1, Math.max(0, Number(parsed.confidence) || 0.7)),
+          reason: parsed.reason || "",
+          source: provider,
+          aiSuggested: true,
+        };
+      }
     }
   } catch {
     /* rules fallback */
